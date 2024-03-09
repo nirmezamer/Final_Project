@@ -14,6 +14,7 @@ def convert_RGB_to_YCbCr(img):
     img_Cb = -0.1687*R - 0.3313*G + 0.5*B +128
     img_Cr = 0.5*R - 0.4187*G - 0.0813*B + 128
 
+
     print(f"[comp]: Min Val = {np.min(img_Y)} \n\t\tMax Val = {np.max(img_Y)}")
 
     return img_Y, img_Cb, img_Cr
