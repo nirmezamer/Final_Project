@@ -13,7 +13,6 @@ import os
 from skimage.metrics import structural_similarity as ssim
 from skimage import io, filters
 
-
 # Notice that the order of the input images matters!
 
 def calc_ssim(original_image, reconstruct_image):
