@@ -41,11 +41,23 @@ def get_QC_list():
         [82, 81, 80, 121, 120, 112, 99, 99]
     ], dtype=np.int32)
 
+    youtube_QC = np.array([
+        [4, 4, 6, 10, 21, 21, 21, 21],
+        [4, 5, 6, 21, 21, 21, 21, 21],
+        [6, 6, 12, 21, 21, 21, 21, 21],
+        [10, 14, 21, 21, 21, 21, 21, 21],
+        [21, 21, 21, 21, 21, 21, 21, 21],
+        [21, 21, 21, 21, 21, 21, 21, 21],
+        [21, 21, 21, 21, 21, 21, 21, 21],
+        [21, 21, 21, 21, 21, 21, 21, 21]
+    ], dtype=np.int32)
+
     ### Q matrices list ###
 
     Q = [standard_chrominance_matrix,
          another_chrominance_matrix,
-         yet_another_chrominance_matrix
+         yet_another_chrominance_matrix,
+         youtube_QC
     ]
 
     return Q

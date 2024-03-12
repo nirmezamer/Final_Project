@@ -14,19 +14,20 @@ def convert_RGB_to_YCbCr(img):
     img_Cb = -0.1687*R - 0.3313*G + 0.5*B +128
     img_Cr = 0.5*R - 0.4187*G - 0.0813*B + 128
 
-    print(f"[comp]: Min Val = {np.min(img_Y)} \n\t\tMax Val = {np.max(img_Y)}")
-
     return img_Y, img_Cb, img_Cr
 
-def shrink_matrix(mat, k):
+def shrink_matrix(mat, reduction_size):
     """
     :param mat: 2d array
-    :param k: integer
+    :param reduction_size: integer
     :return: shrink_mat:
-    such that   shrink_mat.shape[0] = (1/k)*mat.shape[0] &
-                shrink_mat.shape[1] = (1/k)*mat.shape[1]
+    such that   shrink_mat.shape[0] = (1/reduction_size)*mat.shape[0] &
+                shrink_mat.shape[1] = (1/reduction_size)*mat.shape[1]
     document of transform.rescale: https://scikit-image.org/docs/stable/api/skimage.transform.html
     """
+
+    # TODO: implement
+
     # N, M = mat.shape
     # X, Y = np.meshgrid(np.arange(N), np.arange(M))
     # X = X % 2
@@ -117,20 +118,22 @@ def proccessing_image_before_compress(mat, Q):
     :param Q: 2d array (k*k size)
     :return: zigzag_blocks_list: list of (k^2 length) lists after zigzagging
     """
-    k = 8
+    k = Q.shape[0]
     blocks_list = break_matrix_into_blocks(mat, k)
     zigzag_blocks_list = []
     for block in blocks_list:
+        block = block.astype(np.int32)
         # centering the block values
         block = block - 128
         block = DCT(block)
-        # devide and round to floor the block
+        # divide and round to floor the block
         block = block / Q
+        block = np.round(block)
         # round all the block except to DC-Value
+        # TODO: send the DC Val with the block and encode it in deferential encoding
         block = zigzag(block, k)
         DC_Val = block[0]
         block  = block[1:]
-        block = np.round(block)
         zigzag_blocks_list.append([DC_Val, block])
     return zigzag_blocks_list
 
@@ -194,6 +197,13 @@ def encoding_image(zigzag_blocks_list, compressed_file, N, M):
     :return None:
     """
     with open(compressed_file, "w") as file:
+        # TODO: change th compress file format such that each line will contain:
+        # 1: sizes
+        # 2: encoded array
+        # 3: huffman tree
+
+        # TODO: check the EOB sign
+
         file.write(f"{N} {M}\n")
         non_DC_Vals_list = []
         for i in range(len(zigzag_blocks_list)):
@@ -223,8 +233,12 @@ def compress_image(img_RGB, Y_compressed_file, Cb_compressed_file, Cr_compressed
     :param Cb_compressed_file: str - Binary file name
     :param Cr_compressed_file: str - Binary file name
     """
+
+    # TODO: add an option to change Q size
+
     img_Y, img_Cb, img_Cr = convert_RGB_to_YCbCr(img_RGB)
 
+    # TODO: delete
     print(f"[compY]:Min Val = {np.min(img_Y)} \n\t\tMax Val = {np.max(img_Y)}")
     print(f"[compB]:Min Val = {np.min(img_Cb)} \n\t\tMax Val = {np.max(img_Cb)}")
     print(f"[compR]:Min Val = {np.min(img_Cr)} \n\t\tMax Val = {np.max(img_Cr)}")

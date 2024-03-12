@@ -16,32 +16,23 @@ def convert_YCbCr_to_RGB(Y_matrix, Cb_matrix, Cr_matrix):
     G = Y_matrix - 0.34414 * (Cb_matrix - 128) - 0.71414 * (Cr_matrix - 128)
     B = Y_matrix + 1.772 * (Cb_matrix - 128)
 
-    # Convert to 8-bit integer
-
-    R[R < 0] = 0
-    G[G < 0] = 0
-    B[B < 0] = 0
-
-    R = R.astype(np.uint8)
-    G = G.astype(np.uint8)
-    B = B.astype(np.uint8)
-
     # Stack the channels to form the RGB image
     RGB_img = np.stack((R, G, B), axis=-1)
+    RGB_img = np.clip(RGB_img, 0, 255).astype(np.uint8)
     return RGB_img
 
-def expand_matrix(mat, k):
+def expand_matrix(mat, reduction_size):
     """
     :param mat: 2d array
-    :param k: integer
+    :param reduction_size: integer
     :return: expand_mat:
-    such that   shrink_mat.shape[0] = (k)*mat.shape[0] &
-                shrink_mat.shape[1] = (k)*mat.shape[1]
+    such that   shrink_mat.shape[0] = (reduction_size)*mat.shape[0] &
+                shrink_mat.shape[1] = (reduction_size)*mat.shape[1]
     document of transform.rescale: https://scikit-image.org/docs/stable/api/skimage.transform.html
     """
 
     # Repeat each element in the matrix k times along rows and columns
-    rescaled_mat = np.repeat(np.repeat(mat, k, axis=0), k, axis=1)
+    rescaled_mat = np.repeat(np.repeat(mat, reduction_size, axis=0), reduction_size, axis=1)
 
     return rescaled_mat
 
@@ -66,14 +57,14 @@ def merge_blocks_into_matrix(blocks_list, k, N, M):
     return matrix
 
 
-def inverse_zigzag(zigzag_block_list, k):
+def inverse_zigzag(flatten_zigzag_block, k):
     """
-    :param zigzag_block_list: 1-d (k^2) array of zigzag of block
+    :param flatten_zigzag_block: 1-d (k^2) array of zigzag of block
     :param k: integer
     :return: 2-d (k*k) array
     """
     # Initialize the 2D block with zeros
-    block = np.zeros((k, k))
+    block = np.zeros((k, k), dtype=np.int32)
 
     # Initialize indices for zigzag traversal
     index = 0
@@ -83,14 +74,14 @@ def inverse_zigzag(zigzag_block_list, k):
             for i in range(min(k, sum_ij + 1)):
                 j = sum_ij - i
                 if j < k:
-                    block[j, i] = zigzag_block_list[index]
+                    block[j, i] = flatten_zigzag_block[index]
                     index += 1
         else:
             # Odd sum, fill in reverse order
             for j in range(min(k, sum_ij + 1)):
                 i = sum_ij - j
                 if i < k:
-                    block[j, i] = zigzag_block_list[index]
+                    block[j, i] = flatten_zigzag_block[index]
                     index += 1
 
     return block
@@ -117,7 +108,7 @@ def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M):
     :return matrix: 2d array
     """
 
-    k = 8
+    k = Q.shape[0]
 
     restored_blocks_list = []
     # create the original block out of its zigzag travel vector
@@ -127,6 +118,9 @@ def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M):
         restored_block = restored_block*Q
         restored_block = IDCT(restored_block)
         restored_block = restored_block + 128
+        # TODO: add comment
+        restored_block = np.clip(restored_block, 0, 255)
+        restored_block = restored_block.astype(np.uint8)
         restored_blocks_list.append(restored_block)
 
     # create the matrix out of all the blocks compose it
@@ -137,16 +131,16 @@ def huffman_decode(decoding_tree, encoding_block):
     """
     :param decoding_tree:  recursive tuple of the tree
     :param encoding_block: str
-    :return block: array of size k^2
+    :return concatenate_blocks: array of all the compressed blocks
     """
-    block = []
+    concatenate_blocks = []
     cur_node = decoding_tree
     for char in encoding_block:
         cur_node = cur_node[int(char)]
         if isinstance(cur_node, int):
-            block.append(cur_node)
+            concatenate_blocks.append(cur_node)
             cur_node = decoding_tree
-    return block
+    return concatenate_blocks
 
 def decoding_image(compressed_file):
     """
@@ -155,6 +149,8 @@ def decoding_image(compressed_file):
     """
     zigzag_blocks_list = []
     with (open(compressed_file, "r") as file):
+
+        # TODO: to be aligned to the encoding
 
         # First line - sizes of the image
         size_line = file.readline()
@@ -172,10 +168,10 @@ def decoding_image(compressed_file):
         decoding_tree = ast.literal_eval(decoding_tree)  # build the dictionary
 
         # Fourth line - decoding_tree
-        encoding_block = file.readline()
+        encoding_concatenate_blocks = file.readline()
 
         # Build the blocks
-        concatenate_blocks = huffman_decode(decoding_tree, encoding_block)
+        concatenate_blocks = huffman_decode(decoding_tree, encoding_concatenate_blocks)
         i = 0
         next_block = []
         for num in concatenate_blocks:
@@ -206,6 +202,7 @@ def decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, 
     Cb_matrix = restoring_image_after_decompress(Cb_zigzag_blocks_list, QC, N2, M2)
     Cr_matrix = restoring_image_after_decompress(Cr_zigzag_blocks_list, QC, N3, M3)
 
+    # TODO: delete
     print(f"[decoY]:Min Val = {np.min(Y_matrix)} \n\t\tMax Val = {np.max(Y_matrix)}")
     print(f"[decoB]:Min Val = {np.min(Cb_matrix)} \n\t\tMax Val = {np.max(Cb_matrix)}")
     print(f"[decoR]:Min Val = {np.min(Cr_matrix)} \n\t\tMax Val = {np.max(Cr_matrix)}")
@@ -213,7 +210,6 @@ def decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, 
     Cb_matrix = expand_matrix(Cb_matrix, reduction_size)
     Cr_matrix = expand_matrix(Cr_matrix, reduction_size)
 
-    #import pdb; pdb.set_trace()
     decompressed_image = convert_YCbCr_to_RGB(Y_matrix, Cb_matrix, Cr_matrix)
     return decompressed_image
 

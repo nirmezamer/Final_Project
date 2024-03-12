@@ -32,11 +32,25 @@ def get_QY_list():
         [14, 18, 19, 20, 22, 20, 21, 20]
     ], dtype=np.int32)
 
+    ### 4 ###
+
+    youtube_QY = np.array([
+        [4, 3, 4, 4, 4, 6, 11, 15],
+        [3, 3, 3, 4, 5, 8, 14, 19],
+        [3, 4, 4, 5, 8, 12, 16, 20],
+        [4, 5, 6, 7, 12, 14, 18, 20],
+        [6, 6, 9, 11, 14, 17, 21, 23],
+        [9, 12, 12, 18, 23, 22, 25, 21],
+        [11, 13, 15, 17, 21, 23, 25, 21],
+        [13, 12, 12, 13, 16, 19, 21, 21]
+    ], dtype=np.int32)
+
     ### Q matrices list ###
 
     Q = [standard_luminance_matrix,
          flat_quantization_matrix,
-         high_quality_luminance_matrix
+         high_quality_luminance_matrix,
+         youtube_QY
     ]
 
     return Q
