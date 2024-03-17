@@ -30,6 +30,3 @@ python3 <PROJECT_PATH>/JPEG_tester.py
 3. The is already an example image in "images_to_compress" directory.
 
 ## TO-DO
-1. convert the image format RGBA->RGB
-2. pass the image size in the encoded files
-3. fix the merge_blocks_into_matrix function to create the image by its size
