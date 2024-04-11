@@ -75,6 +75,15 @@ def main():
     QY = q*QY_list[0]
     QC = q*QC_list[0]
 
+    QY_size = 8
+    QC_size = 8
+
+    # changing the sizes of the Quantization Matrices
+    if QY_size != 8:
+        QY = cv2.transform.resize(QY, (QY_size, QY_size), preserve_range=True)
+    if QC_size != 8:
+        QC = cv2.transform.resize(QC, (QC_size, QC_size), preserve_range=True)
+
     # Reduction size
     reduction_size = 2
 
@@ -123,12 +132,12 @@ def main():
 
         # Calculate the measurement parameters and printing the result
         elapsed_time = end_time - start_time
-        mse = np.sqrt(np.mean(np.square(img.flatten() - compressed_img.flatten())))
+        rms = np.sqrt(np.mean(np.square(img.flatten() - compressed_img.flatten())))
         # ssim_val = calc_ssim(img, compressed_img)
         compression_ratio = calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file)
 
         print(f"Elapsed time: {elapsed_time:.2f} seconds")
-        print(f"MSE value: {mse:.2f}")
+        print(f"RMS value: {rms:.2f}")
         # print(f"SSIM value: {ssim_val:.2f}")
         print(f"Compression Ratio: {compression_ratio*100:.2f}%")
         print("")

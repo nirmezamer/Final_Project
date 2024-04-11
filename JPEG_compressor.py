@@ -25,40 +25,22 @@ def shrink_matrix(mat, reduction_size):
                 shrink_mat.shape[1] = (1/reduction_size)*mat.shape[1]
     document of transform.rescale: https://scikit-image.org/docs/stable/api/skimage.transform.html
     """
+    # Convert the input matrix to a NumPy array
+    mat = np.array(mat)
 
-    # TODO: implement
+    # Get the dimensions of the original matrix
+    rows, cols = mat.shape
 
-    # N, M = mat.shape
-    # X, Y = np.meshgrid(np.arange(N), np.arange(M))
-    # X = X % 2
-    # Y = Y % 2
-    #
-    # mask1 = (1-X) * (1-Y)
-    # mask2 = (1-X) * Y
-    # mask3 = X * (1-Y)
-    # mask4 = X * Y
-    #
-    #
-    #
-    # ret = np.zeros((N//2, M//2))
-    # ret = (mat[mask1 == 1] + mat[mask2 == 1] + mat[mask3 == 1] + mat[mask4 == 1]) // 4
-    # return ret
+    # Calculate the dimensions of the new matrix
+    new_rows, new_cols = rows // reduction_size, cols // reduction_size
 
-    # Extract even and odd indices for rows and columns
-    rows_even = slice(0, None, 2)
-    rows_odd = slice(1, None, 2)
-    cols_even = slice(0, None, 2)
-    cols_odd = slice(1, None, 2)
+    # Reshape the original matrix into blocks
+    blocks = mat.reshape(new_rows, reduction_size, new_cols, reduction_size)
 
-    # Extract the pixel values for each neighborhood
-    neighborhood = mat[rows_even, cols_even] + \
-                   mat[rows_odd, cols_even] + \
-                   mat[rows_even, cols_odd] + \
-                   mat[rows_odd, cols_odd]
+    # Calculate the average of each block
+    block_avg = np.mean(blocks, axis=(1, 3))
 
-    # Compute the mean for each neighborhood
-    mean_neighborhood = neighborhood / 4
-    return mean_neighborhood
+    return block_avg
 
 def break_matrix_into_blocks(mat, k):
     """
@@ -66,17 +48,21 @@ def break_matrix_into_blocks(mat, k):
     :param k: integer
     :return: mat_blocks_list: list of k*k block of mat
     """
+    mat = np.array(mat)
     rows, cols = mat.shape
-    # there will not be any left over in the image because image_size and k will be
-    # A whole power of 2
     num_blocks_row = rows // k
     num_blocks_col = cols // k
-    mat_blocks_list = []
-    for i in range(num_blocks_row):
-        for j in range(num_blocks_col):
-            block = mat[i * k: (i + 1) * k, j * k: (j + 1) * k]
-            mat_blocks_list.append(block)
-    return mat_blocks_list
+
+    # Reshape the original matrix into a 4D array of blocks
+    blocks = mat.reshape(num_blocks_row, k, num_blocks_col, k)
+
+    # Transpose the axes to rearrange them for concatenation
+    blocks = blocks.transpose(0, 2, 1, 3)
+
+    # Reshape the blocks array into a 3D array where each block is a 2D array
+    blocks = blocks.reshape(-1, k, k)
+
+    return blocks
 
 def DCT(block):
     """
@@ -234,14 +220,7 @@ def compress_image(img_RGB, Y_compressed_file, Cb_compressed_file, Cr_compressed
     :param Cr_compressed_file: str - Binary file name
     """
 
-    # TODO: add an option to change Q size
-
     img_Y, img_Cb, img_Cr = convert_RGB_to_YCbCr(img_RGB)
-
-    # TODO: delete
-    print(f"[compY]:Min Val = {np.min(img_Y)} \n\t\tMax Val = {np.max(img_Y)}")
-    print(f"[compB]:Min Val = {np.min(img_Cb)} \n\t\tMax Val = {np.max(img_Cb)}")
-    print(f"[compR]:Min Val = {np.min(img_Cr)} \n\t\tMax Val = {np.max(img_Cr)}")
 
     img_Cb = shrink_matrix(img_Cb, reduction_size)
     img_Cr = shrink_matrix(img_Cr, reduction_size)

@@ -118,7 +118,7 @@ def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M):
         restored_block = restored_block*Q
         restored_block = IDCT(restored_block)
         restored_block = restored_block + 128
-        # TODO: add comment
+        # limit the values of the array to be within the range [0,255]
         restored_block = np.clip(restored_block, 0, 255)
         restored_block = restored_block.astype(np.uint8)
         restored_blocks_list.append(restored_block)
@@ -201,11 +201,6 @@ def decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, 
     Y_matrix  = restoring_image_after_decompress(Y_zigzag_blocks_list, QY,  N1, M1)
     Cb_matrix = restoring_image_after_decompress(Cb_zigzag_blocks_list, QC, N2, M2)
     Cr_matrix = restoring_image_after_decompress(Cr_zigzag_blocks_list, QC, N3, M3)
-
-    # TODO: delete
-    print(f"[decoY]:Min Val = {np.min(Y_matrix)} \n\t\tMax Val = {np.max(Y_matrix)}")
-    print(f"[decoB]:Min Val = {np.min(Cb_matrix)} \n\t\tMax Val = {np.max(Cb_matrix)}")
-    print(f"[decoR]:Min Val = {np.min(Cr_matrix)} \n\t\tMax Val = {np.max(Cr_matrix)}")
 
     Cb_matrix = expand_matrix(Cb_matrix, reduction_size)
     Cr_matrix = expand_matrix(Cr_matrix, reduction_size)
