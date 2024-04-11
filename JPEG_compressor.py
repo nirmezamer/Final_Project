@@ -112,15 +112,12 @@ def proccessing_image_before_compress(mat, Q):
         # centering the block values
         block = block - 128
         block = DCT(block)
-        # divide and round to floor the block
+        # divide and round to floor the block values
         block = block / Q
         block = np.round(block)
-        # round all the block except to DC-Value
-        # TODO: send the DC Val with the block and encode it in deferential encoding
+        # create the list of zigzag blocks
         block = zigzag(block, k)
-        DC_Val = block[0]
-        block  = block[1:]
-        zigzag_blocks_list.append([DC_Val, block])
+        zigzag_blocks_list.append(block)
     return zigzag_blocks_list
 
 def huffman_encode(block):
@@ -183,32 +180,28 @@ def encoding_image(zigzag_blocks_list, compressed_file, N, M):
     :return None:
     """
     with open(compressed_file, "w") as file:
-        # TODO: change th compress file format such that each line will contain:
+
+        EOB = 1000
+
+        # compressed file format such that each line will contain:
         # 1: sizes
         # 2: encoded array
         # 3: huffman tree
 
-        # TODO: check the EOB sign
-
         file.write(f"{N} {M}\n")
-        non_DC_Vals_list = []
+        values_to_encode = []
         for i in range(len(zigzag_blocks_list)):
             block = zigzag_blocks_list[i]
-            DC_Val, block = block[0], block[1]
-            if i == len(zigzag_blocks_list) - 1:
-                file.write(f"{DC_Val}\n")
-            else:
-                file.write(f"{DC_Val}\t")
             # Remove all the last zeros
             block = np.trim_zeros(block, 'b')
-            non_DC_Vals_list += list(block) + [1000]
+            values_to_encode += list(block) + [EOB]
 
-        decoding_tree, encoding_block = huffman_encode(non_DC_Vals_list)
+        decoding_tree, encoding_block = huffman_encode(values_to_encode)
+        file.write(encoding_block)
+        file.write('\n')
         decoding_tree_str = str(decoding_tree)
         decoding_tree_str = decoding_tree_str.replace(" ", "")
         file.write(decoding_tree_str)
-        file.write('\n')
-        file.write(encoding_block)
 
     return None
 

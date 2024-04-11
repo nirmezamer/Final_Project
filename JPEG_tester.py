@@ -41,28 +41,23 @@ def calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compre
     compressed_image_num_of_bits = 0
     for file_path in files_paths:
         with open(file_path, "r") as file:
+
             # First line - sizes of the image
             size_line = file.readline()
             # Ignoring it ...
 
-            # Second line - DC_Vals
-            DC_Vals = file.readline()
-            DC_Vals = DC_Vals.split('\t')
+            # Second line - encoding_concatenate_blocks
+            encoding_block = file.readline()
 
             # Third line - decoding_tree
             decoding_tree = file.readline()
 
-            # Fourth line - decoding_tree
-            encoding_block = file.readline()
-
-            # The DC_Val of each block if a float number (== 32 bits)
-            compressed_image_num_of_bits += 32 * len(DC_Vals)
             # The huffman tree is presented as a stream of chars, Thus every char uses byte (== 8 bits)
             compressed_image_num_of_bits += 8 * len(decoding_tree)
             # The encoding block is presented as a binary stream, Thus every char uses 1 bit
             compressed_image_num_of_bits += 1 * len(encoding_block)
 
-    compression_ratio = compressed_image_num_of_bits / original_image_num_of_bits
+    compression_ratio = original_image_num_of_bits / compressed_image_num_of_bits
     return compression_ratio
 
 def main():
@@ -136,17 +131,17 @@ def main():
         # ssim_val = calc_ssim(img, compressed_img)
         compression_ratio = calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file)
 
-        print(f"Elapsed time: {elapsed_time:.2f} seconds")
-        print(f"RMS value: {rms:.2f}")
+        print(f"Elapsed time:\t\t{elapsed_time:.2f} seconds")
+        print(f"RMS value:\t\t\t{rms:.2f}")
         # print(f"SSIM value: {ssim_val:.2f}")
-        print(f"Compression Ratio: {compression_ratio*100:.2f}%")
+        print(f"Compression Ratio:\t{compression_ratio:.2f}")
         print("")
 
         fig, ax = plt.subplots(1,2)
         ax[0].imshow(img)
-        ax[0].set_title(f"Original {image_name_without_format} Image")
+        ax[0].set_title(f"{image_name_without_format} - Original Image")
         ax[1].imshow(compressed_img)
-        ax[1].set_title(f"IJPEG{{ JPEG{{ {image_name_without_format} }} }}")
+        ax[1].set_title(f"{image_name_without_format} - Restored Image")
         plt.tight_layout()
         fig.savefig(f"./created_figures/{image_name_without_format}.jpg")
 

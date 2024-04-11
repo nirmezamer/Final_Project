@@ -142,7 +142,7 @@ def huffman_decode(decoding_tree, encoding_block):
             cur_node = decoding_tree
     return concatenate_blocks
 
-def decoding_image(compressed_file):
+def decoding_image(compressed_file, block_size=64):
     """
     :param compressed_file: Binary file
     :return zigzag_blocks_list: list of (k^2 length) lists after zigzagging
@@ -150,7 +150,7 @@ def decoding_image(compressed_file):
     zigzag_blocks_list = []
     with (open(compressed_file, "r") as file):
 
-        # TODO: to be aligned to the encoding
+        EOB = 1000
 
         # First line - sizes of the image
         size_line = file.readline()
@@ -158,28 +158,21 @@ def decoding_image(compressed_file):
         N = int(sizes[0])
         M = int(sizes[1])
 
-        # Second line - DC_Vals
-        DC_Vals = file.readline()
-        DC_Vals = DC_Vals.split('\t')
-        DC_Vals = [float(x) for x in DC_Vals]
+        # Second line - encoding_concatenate_blocks
+        encoding_concatenate_blocks = file.readline()[:-1]
 
         # Third line - decoding_tree
         decoding_tree = file.readline()
         decoding_tree = ast.literal_eval(decoding_tree)  # build the dictionary
 
-        # Fourth line - decoding_tree
-        encoding_concatenate_blocks = file.readline()
-
         # Build the blocks
         concatenate_blocks = huffman_decode(decoding_tree, encoding_concatenate_blocks)
-        i = 0
         next_block = []
         for num in concatenate_blocks:
-            if num == 1000:
+            if num == EOB:
                 # The end of block
-                next_block += (63 - len(next_block)) * [0]
-                zigzag_blocks_list.append([DC_Vals[i]] + next_block)
-                i += 1
+                next_block += (block_size - len(next_block)) * [0]
+                zigzag_blocks_list.append(next_block)
                 next_block = []
             else:
                 next_block.append(num)
@@ -194,11 +187,13 @@ def decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, 
     :return: decompressed_image: image in RGB format
     """
 
-    Y_zigzag_blocks_list,  N1, M1 = decoding_image(Y_compressed_file)
-    Cb_zigzag_blocks_list, N2, M2 = decoding_image(Cb_compressed_file)
-    Cr_zigzag_blocks_list, N3, M3 = decoding_image(Cr_compressed_file)
+    block_size = QY.shape[0] * QY.shape[1]
 
-    Y_matrix  = restoring_image_after_decompress(Y_zigzag_blocks_list, QY,  N1, M1)
+    Y_zigzag_blocks_list,  N1, M1 = decoding_image(Y_compressed_file,  block_size)
+    Cb_zigzag_blocks_list, N2, M2 = decoding_image(Cb_compressed_file, block_size)
+    Cr_zigzag_blocks_list, N3, M3 = decoding_image(Cr_compressed_file, block_size)
+
+    Y_matrix  = restoring_image_after_decompress(Y_zigzag_blocks_list,  QY, N1, M1)
     Cb_matrix = restoring_image_after_decompress(Cb_zigzag_blocks_list, QC, N2, M2)
     Cr_matrix = restoring_image_after_decompress(Cr_zigzag_blocks_list, QC, N3, M3)
 
