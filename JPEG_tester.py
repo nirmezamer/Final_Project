@@ -114,7 +114,6 @@ def main():
         # Calculate the measurement parameters and printing the result
         elapsed_time = end_time - start_time
         rms = np.sqrt(np.mean(np.square(img.flatten() - compressed_img.flatten())))
-        # ssim_val = calc_ssim(img, compressed_img)
         compression_ratio = calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file)
 
         print(f"Elapsed time:\t\t{elapsed_time:.2f} seconds")
@@ -132,5 +131,91 @@ def main():
 
     return None
 
+def find_best_QY_matrix():
+
+    images_to_compress_path = "./images_to_compress"
+    image_name = "earth.webp"
+    image_name_without_format = "earth"
+    image_format = "webp"
+    Y_compressed_file = f"./find_best_QY_mat/{image_name_without_format}_{image_format}_Y_component.txt"
+    Cb_compressed_file = f"./find_best_QY_mat/{image_name_without_format}_{image_format}_Cb_component.txt"
+    Cr_compressed_file = f"./find_best_QY_mat/{image_name_without_format}_{image_format}_Cr_component.txt"
+
+    # Read the image
+    img = plt.imread(f"{images_to_compress_path}/{image_name}")
+    img = prepare_image_to_compress(img, image_format)
+
+    # Getting lists of options for Quantization Matrices
+    QY_list = QY_matrices.get_QY_list()
+    QC_list = QC_matrices.get_QC_list()
+
+    q = 1
+    QC = q * QC_list[0]
+
+    # Reduction size
+    reduction_size = 2
+
+    # Initialize lists to store values
+    i_values = []
+    elapsed_times = []
+    rms_values = []
+    compression_ratios = []
+
+    for i in range(len(QY_list)):
+
+        QY = q * QY_list[i]
+
+        # Compress the image and measure its start & end time
+        start_time = time.time()
+        JPEG_compressor.compress_image(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size)
+        end_time = time.time()
+
+        # Decompress the image
+        compressed_img = JPEG_decompress.decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size)
+
+        # Calculate the measurement parameters and printing the result
+        elapsed_time = end_time - start_time
+        rms = np.sqrt(np.mean(np.square(img.flatten() - compressed_img.flatten())))
+        compression_ratio = calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file)
+
+        # Append current values to lists
+        i_values.append(i)
+        elapsed_times.append(elapsed_time)
+        rms_values.append(rms)
+        compression_ratios.append(compression_ratio)
+
+    # After the loop, plot the values
+    plt.figure(figsize=(10, 6))
+
+    plt.subplot(3, 1, 1)
+    plt.plot(i_values, elapsed_times, marker='o')
+    plt.title('Elapsed Time using QY[i]')
+    plt.xlabel('i')
+    plt.xticks(np.arange(min(i_values), max(i_values) + 1, 1.0))
+    plt.ylabel('Elapsed Time')
+    plt.ylim(bottom=0, top=max(elapsed_times) * 1.1)
+
+    plt.subplot(3, 1, 2)
+    plt.plot(i_values, rms_values, marker='o')
+    plt.title('RMS Value using QY[i]')
+    plt.xlabel('i')
+    plt.xticks(np.arange(min(i_values), max(i_values) + 1, 1.0))
+    plt.ylabel('RMS Value')
+    plt.ylim(bottom=0, top=max(rms_values) * 1.1)
+
+    plt.subplot(3, 1, 3)
+    plt.plot(i_values, compression_ratios, marker='o')
+    plt.title('Compression Ratio using QY[i]')
+    plt.xlabel('i')
+    plt.xticks(np.arange(min(i_values), max(i_values) + 1, 1.0))
+    plt.ylabel('Compression Ratio')
+    plt.ylim(bottom=0, top=max(compression_ratios) * 1.1)
+
+    plt.tight_layout()
+    plt.savefig(f"./find_best_QY_mat/quantitative_parameters.jpg")
+    plt.show()
+
+    return
+
 if __name__ == "__main__":
-    main()
+    find_best_QY_matrix()
