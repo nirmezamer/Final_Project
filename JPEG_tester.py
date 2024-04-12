@@ -15,15 +15,6 @@ from skimage import io, filters
 
 # Notice that the order of the input images matters!
 
-def calc_ssim(original_image, reconstruct_image):
-    original_image = cv2.cvtColor(original_image, cv2.COLOR_RGB2GRAY)
-    original_image = original_image.astype(np.float32)
-    reconstruct_image = cv2.cvtColor(reconstruct_image, cv2.COLOR_RGB2GRAY)
-    reconstruct_image = reconstruct_image.astype(np.float32)
-    ssim_metric = ssim(original_image, reconstruct_image,
-                  data_range=original_image.max() - original_image.min())
-    return ssim_metric
-
 def calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file):
     """
     :param img: 2d-array of the image
@@ -60,6 +51,25 @@ def calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compre
     compression_ratio = original_image_num_of_bits / compressed_image_num_of_bits
     return compression_ratio
 
+def prepare_image_to_compress(img, image_format):
+    # Convert image to be with shape that divide by 16
+    d = 16
+    img_shape = np.shape(img)
+    N, M, F = img_shape[0], img_shape[1], img_shape[2]
+    img = img[:(N // d) * d, :(M // d) * d, :]
+
+    if F == 4:  # That means the image read in RGBA format
+        img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+
+    if image_format == "png":
+        img = img * 255
+
+    # Convert the image's pixels type to be uint8 which it means their
+    # values are integers between 0-255
+    img = img.astype(np.uint8)
+
+    return img
+
 def main():
 
     # Getting lists of options for Quantization Matrices
@@ -70,22 +80,12 @@ def main():
     QY = q*QY_list[0]
     QC = q*QC_list[0]
 
-    QY_size = 8
-    QC_size = 8
-
-    # changing the sizes of the Quantization Matrices
-    if QY_size != 8:
-        QY = cv2.transform.resize(QY, (QY_size, QY_size), preserve_range=True)
-    if QC_size != 8:
-        QC = cv2.transform.resize(QC, (QC_size, QC_size), preserve_range=True)
-
     # Reduction size
     reduction_size = 2
 
     # Declare list of picture to compress
     images_to_compress_path = "./images_to_compress"
     images_names = os.listdir(images_to_compress_path) # list of names of images in the dir
-    images_paths = [f"{images_to_compress_path}/{image_name}" for image_name in images_names] # add the images_to_compress_path prefix
 
     for image_name in images_names:
 
@@ -101,21 +101,7 @@ def main():
         # Read the image
         img = plt.imread(f"{images_to_compress_path}/{image_name}")
 
-        # Convert image to be with shape that divide by 16
-        d = 16
-        img_shape = np.shape(img)
-        N, M, F = img_shape[0], img_shape[1], img_shape[2]
-        img = img[:(N // d) * d, :(M // d) * d, :]
-
-        if F == 4: # That means the image read in RGBA format
-            img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
-
-        if image_format == "png":
-            img = img * 255
-
-        # Convert the image's pixels type to be uint8 which it means their
-        # values are integers between 0-255
-        img = img.astype(np.uint8)
+        img = prepare_image_to_compress(img, image_format)
 
         # Compress the image and measure its start & end time
         start_time = time.time()
@@ -133,7 +119,6 @@ def main():
 
         print(f"Elapsed time:\t\t{elapsed_time:.2f} seconds")
         print(f"RMS value:\t\t\t{rms:.2f}")
-        # print(f"SSIM value: {ssim_val:.2f}")
         print(f"Compression Ratio:\t{compression_ratio:.2f}")
         print("")
 
