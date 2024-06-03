@@ -207,7 +207,8 @@ def encoding_image(zigzag_blocks_list, compressed_file, N, M):
 
 def compress_image(img_RGB, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size):
     """
-    :param img_RGB: image in RGB format - returned value
+    :param img_RGB: image in RGB format
+    # returns files of the compressed image
     :param Y_compressed_file:  str - Binary file name
     :param Cb_compressed_file: str - Binary file name
     :param Cr_compressed_file: str - Binary file name
