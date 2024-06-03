@@ -1,8 +1,20 @@
-import cv2
 
 def decompress_P_frame(I_frame, residuals_blocks, motion_vectors, block_size):
-    pass
+    """
+    :param I_frame:
+    :param residuals_blocks:
+    :param motion_vectors:
+    :param block_size:
+    :return:
+    """
 
+    restored_blocks = []
+    margin = block_size // 2
+    for i, residual_block in enumerate(residuals_blocks):
+        row, col = motion_vectors[i]
+        extract_similar_block = I_frame[row - margin: row + margin, col - margin: col + margin]
+        P_frame = extract_similar_block - residual_block
+        restored_blocks.append(P_frame)
 
 def create_video_from_frames(frames_list, video_file_path):
     """
