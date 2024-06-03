@@ -401,6 +401,7 @@ def find_best_reduction_size():
     return
 
 if __name__ == "__main__":
+    main()
     find_best_QY_matrix()
     find_best_QC_matrix()
     find_best_reduction_size()
