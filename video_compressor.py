@@ -2,6 +2,7 @@ import matplotlib.pylab as plt
 import numpy as np
 import cv2
 import JPEG_compressor
+import os
 
 def find_the_most_similar_block(current_block, previous_frame, center, window_size=32):
     """
@@ -61,7 +62,7 @@ def find_the_most_similar_block(current_block, previous_frame, center, window_si
     # continue for the next iteration with the most similar block in the current neighborhood
     return find_the_most_similar_block(current_block, previous_frame, curr_best_center, window_size//2)
 
-def compress_P_frame(I_frame, P_frame, block_size=8, window_size=32):
+def prepare_P_frame_for_compression(I_frame, P_frame, block_size=8, window_size=32):
     """
     :param: I_frame: I_frame after YUV transform we use to compress the P_frame
             P_frame: P_frame after YUV transform we want to compress in relate to the I_frame
@@ -122,13 +123,18 @@ def read_video_file_and_break_into_frames(video_file_path):
     cap.release()
     return frames_list, frame_count
 
-def compress_video(video_file_path, I_frame_interval=10):
+def encoding_motion_vectors(motion_vectors, compressed_file):
+    # TODO: implement the function
+    pass
+
+def compress_video(video_file_path, QY, QC, I_frame_interval=10):
 
     # TODO: set the global variable
-    compressed_files_video_folder_global = ""
+    compressed_files_video_folder_global = "comressed_files_for_video"
     compressed_files_video_folder = video_file_path.split('/')[-1].split('.')[0]
-    QY = 1
-    QC = 1
+    # if the folder does not exist, create it
+    if not os.path.exists(f'{compressed_files_video_folder_global}/{compressed_files_video_folder}'):
+        os.makedirs(f'{compressed_files_video_folder_global}/{compressed_files_video_folder}')
     reduction_size = 1
     ############################
 
@@ -136,10 +142,12 @@ def compress_video(video_file_path, I_frame_interval=10):
     last_I_frame = None
     for i, frame in enumerate(frames_list):
         if i % I_frame_interval == 0:
-            # compress the I_frame by using JPEG compression
-
+            # Save the last I frame components for the next P frames
             last_I_frame_Y, last_I_frame_Cb, last_I_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(frame)
+            last_I_frame_Cb = JPEG_compressor.shrink_matrix(last_I_frame_Cb, reduction_size)
+            last_I_frame_Cr = JPEG_compressor.shrink_matrix(last_I_frame_Cr, reduction_size)
 
+            # compress the I_frame by using JPEG compression
             Y_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Y_compressed_frame_{i}.txt'
             Cb_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cb_compressed_frame_{i}.txt'
             Cr_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cr_compressed_frame_{i}.txt'
@@ -150,18 +158,52 @@ def compress_video(video_file_path, I_frame_interval=10):
             # compress the P_frame by using motion estimation and JPEG compression
 
             P_frame_Y, P_frame_Cb, P_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(frame)
+            P_frame_Cb = JPEG_compressor.shrink_matrix(P_frame_Cb, reduction_size)
+            P_frame_Cr = JPEG_compressor.shrink_matrix(P_frame_Cr, reduction_size)
 
-            # TODO: check with Guy what the prameters to send to the compress_P_frame function
-            compress_P_frame(last_I_frame_Y, P_frame_Y)
-            compress_P_frame(last_I_frame_Cb, P_frame_Cb)
-            compress_P_frame(last_I_frame_Cr, P_frame_Cr)
+            N1, M1 = P_frame_Y.shape
+            N2, M2 = P_frame_Cb.shape
+            N3, M3 = P_frame_Cr.shape
+
+            # Prepare the P_frame for compression
+            P_frame_Y_residuals, P_frame_Y_motion_vectors = prepare_P_frame_for_compression(last_I_frame_Y, P_frame_Y, block_size=QY.shape[0], window_size=32)
+            P_frame_Cb_residuals, P_frame_Cb_motion_vectors = prepare_P_frame_for_compression(last_I_frame_Cb, P_frame_Cb, block_size=QC.shape[0], window_size=32)
+            P_frame_Cr_residuals, P_frame_Cr_motion_vectors = prepare_P_frame_for_compression(last_I_frame_Cr, P_frame_Cr, block_size=QC.shape[0], window_size=32)
+
+            # compress the P_frame by using JPEG compression
+            Y_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Y_compressed_frame_{i}.txt'
+            Cb_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cb_compressed_frame_{i}.txt'
+            Cr_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cr_compressed_frame_{i}.txt'
+
+            JPEG_compressor.compress_image_for_video(P_frame_Y_residuals, Y_compressed_frame_file, QY, N1, M1)
+            JPEG_compressor.compress_image_for_video(P_frame_Cb_residuals, Cb_compressed_frame_file, QC, N2, M2)
+            JPEG_compressor.compress_image_for_video(P_frame_Cr_residuals, Cr_compressed_frame_file, QC, N3, M3)
+
+            Y_motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Y_motion_vectors_frame_{i}.txt'
+            Cb_motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cb_motion_vectors_frame_{i}.txt'
+            Cr_motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cr_motion_vectors_frame_{i}.txt'
+
+            encoding_motion_vectors(P_frame_Y_motion_vectors, Y_motion_vectors_compressed_file)
+            encoding_motion_vectors(P_frame_Cb_motion_vectors, Cb_motion_vectors_compressed_file)
+            encoding_motion_vectors(P_frame_Cr_motion_vectors, Cr_motion_vectors_compressed_file)
+
+    return None
 
 def main():
     video_file_path = 'videos_to_compress/earth_video.mp4'
-    frames_list, frame_count = read_video_file_and_break_into_frames(video_file_path)
-    import video_decompressor
-    video_decompressor.create_video_from_frames(frames_list, 'output_video.mp4')
-    print('frame_count:', frame_count)
+    # frames_list, frame_count = read_video_file_and_break_into_frames(video_file_path)
+    # import video_decompressor
+    # video_decompressor.create_video_from_frames(frames_list, 'output_video.mp4')
+    # print('frame_count:', frame_count)
+
+    # declare the quantization matrices
+    import quantization_matrices.luminance as luminance
+    import quantization_matrices.chrominance as chrominance
+    QY = luminance.get_QY_list()[0]
+    QC = chrominance.get_QC_list()[0]
+
+    compress_video(video_file_path, QY, QC, I_frame_interval=10)
+
     return
 
 if __name__ == '__main__':
