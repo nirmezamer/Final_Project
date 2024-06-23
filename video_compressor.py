@@ -1,3 +1,5 @@
+import time
+
 import matplotlib.pylab as plt
 import numpy as np
 import cv2
@@ -79,9 +81,21 @@ def prepare_P_frame_for_compression(I_frame, P_frame, block_size=8, window_size=
     motion_vectors = []
 
     for i, block in enumerate(blocks_of_P_frame):
-        most_similar_block, center = find_the_most_similar_block(block, I_frame, blocks_centers[i], window_size)
-        residuals_blocks.append(most_similar_block - block)
-        motion_vectors.append(center)
+        # checking whether the difference between the parallel blocks does not exceed the threshold
+        row = blocks_centers[i][0]
+        col = blocks_centers[i][1]
+        margin = block_size // 2
+        parallel_I_block = I_frame[row-margin: row+margin,
+                                   col-margin: col+margin]
+        if np.mean(np.square(parallel_I_block - block)) < 300:
+            residuals_blocks.append(parallel_I_block - block)
+            motion_vectors.append(blocks_centers[i])
+
+        else:
+            # find the most similar block using motion vector
+            most_similar_block, center = find_the_most_similar_block(block, I_frame, blocks_centers[i], window_size)
+            residuals_blocks.append(most_similar_block - block)
+            motion_vectors.append(center)
 
     return residuals_blocks, motion_vectors
 
@@ -141,6 +155,7 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10):
     frames_list, frame_count = read_video_file_and_break_into_frames(video_file_path)
     last_I_frame = None
     for i, frame in enumerate(frames_list):
+        print("start to compress the ", i, " frame")
         if i % I_frame_interval == 0:
             # Save the last I frame components for the next P frames
             last_I_frame_Y, last_I_frame_Cb, last_I_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(frame)
@@ -166,7 +181,14 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10):
             N3, M3 = P_frame_Cr.shape
 
             # Prepare the P_frame for compression
+            start_time = time.time()  # Record the start time
+
             P_frame_Y_residuals, P_frame_Y_motion_vectors = prepare_P_frame_for_compression(last_I_frame_Y, P_frame_Y, block_size=QY.shape[0], window_size=32)
+
+            end_time = time.time()  # Record the end time
+
+            elapsed_time = end_time - start_time  # Calculate the elapsed time
+            print(f"The prepare_P_frame_for_compression function took {elapsed_time:.2f} seconds to complete.")
             P_frame_Cb_residuals, P_frame_Cb_motion_vectors = prepare_P_frame_for_compression(last_I_frame_Cb, P_frame_Cb, block_size=QC.shape[0], window_size=32)
             P_frame_Cr_residuals, P_frame_Cr_motion_vectors = prepare_P_frame_for_compression(last_I_frame_Cr, P_frame_Cr, block_size=QC.shape[0], window_size=32)
 
