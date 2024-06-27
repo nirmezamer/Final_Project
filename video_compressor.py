@@ -6,22 +6,27 @@ import cv2
 import JPEG_compressor
 import os
 
-def find_the_most_similar_block(current_block, previous_frame, center, window_size=32):
+def find_the_most_similar_block(P_block, previous_frame, start_position, curr_center, window_size=32):
     """
-    :param      current_block: the block we try to compress using the most similar block in previous frame
+    :param      P_block: the block we try to compress using the most similar block in previous frame
                 previous_frame: np 2D array - last frame already compressed
                 window_size: limits the search borders
                 center: indices of the center block out of all 9 blocks, at first it will be the current_block location in P frame.
-    :return:    similar_block: the most similar block in previous frame to the current block
-                center: the motion vector for the most similar block
+    :return:    similar_block: the most similar block in previous I_frame to the current block
+                motion_vec: the differential motion vector for the most similar block
     """
-    x, y = center
-    block_size = np.shape(current_block)[0]
+    x, y = curr_center
+    block_size = np.shape(P_block)[0]
     margin = block_size // 2
+    curr_I_block = previous_frame[x - margin: x + margin, y - margin: y + margin]
+    motion_vec = (curr_center[0] - start_position[0], curr_center[1] - start_position[1])
 
     if window_size < 1:
-        most_similar_block = previous_frame[x - margin: x + margin, y - margin: y + margin]
-        return most_similar_block, center
+        return curr_I_block, motion_vec
+
+    # checking whether the difference between the parallel blocks does not exceed the threshold
+    if np.mean(np.square(curr_I_block - P_block)) < 25:
+        return curr_I_block, motion_vec
 
     locations = []
     rows, cols = np.shape(previous_frame)
@@ -55,14 +60,14 @@ def find_the_most_similar_block(current_block, previous_frame, center, window_si
     mses = []
     # calculate all mse in relate to the current_block
     for block in blocks_to_compare:
-        mse_value = np.mean(np.square(current_block - block))
+        mse_value = np.mean(np.square(P_block - block))
         mses.append(mse_value)
 
     arg_min = np.argmin(mses)
     curr_best_center = locations[arg_min]
 
     # continue for the next iteration with the most similar block in the current neighborhood
-    return find_the_most_similar_block(current_block, previous_frame, curr_best_center, window_size//2)
+    return find_the_most_similar_block(P_block, previous_frame, start_position, curr_best_center, window_size//2)
 
 def prepare_P_frame_for_compression(I_frame, P_frame, block_size=8, window_size=32):
     """
@@ -80,22 +85,11 @@ def prepare_P_frame_for_compression(I_frame, P_frame, block_size=8, window_size=
     residuals_blocks = []
     motion_vectors = []
 
-    for i, block in enumerate(blocks_of_P_frame):
-        # checking whether the difference between the parallel blocks does not exceed the threshold
-        row = blocks_centers[i][0]
-        col = blocks_centers[i][1]
-        margin = block_size // 2
-        parallel_I_block = I_frame[row-margin: row+margin,
-                                   col-margin: col+margin]
-        if np.mean(np.square(parallel_I_block - block)) < 300:
-            residuals_blocks.append(parallel_I_block - block)
-            motion_vectors.append(blocks_centers[i])
-
-        else:
-            # find the most similar block using motion vector
-            most_similar_block, center = find_the_most_similar_block(block, I_frame, blocks_centers[i], window_size)
-            residuals_blocks.append(most_similar_block - block)
-            motion_vectors.append(center)
+    for i, P_block in enumerate(blocks_of_P_frame):
+        # find the most similar block using motion vector
+        most_similar_block, motion_vec = find_the_most_similar_block(P_block, I_frame, blocks_centers[i], blocks_centers[i], window_size)
+        residuals_blocks.append(most_similar_block - P_block)
+        motion_vectors.append(motion_vec)
 
     return residuals_blocks, motion_vectors
 
