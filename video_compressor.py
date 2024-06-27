@@ -142,9 +142,12 @@ def encoding_motion_vectors(motion_vectors, compressed_file):
     pass
 
 def compress_video(video_file_path, QY, QC, I_frame_interval=10):
+    # TODO: implement the inverse function of compress_video
 
     # TODO: set the global variable
-    compressed_files_video_folder_global = "comressed_files_for_video"
+    # TODO: arrange all the script files
+    # TODO: shrink the video length (seconds) and size (N*M)
+    compressed_files_video_folder_global = "compressed_files_for_video"
     compressed_files_video_folder = video_file_path.split('/')[-1].split('.')[0]
     # if the folder does not exist, create it
     if not os.path.exists(f'{compressed_files_video_folder_global}/{compressed_files_video_folder}'):
@@ -180,6 +183,9 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10):
             N2, M2 = P_frame_Cb.shape
             N3, M3 = P_frame_Cr.shape
 
+            # TODO: Guy to rename prepare_P_frame_for_compression
+            # TODO: Guy to implement the inverse function of prepare_P_frame_for_compression
+            # TODO: change the motion vectors to be the difference between the current block and the most similar block
             # Prepare the P_frame for compression
             start_time = time.time()  # Record the start time
 
