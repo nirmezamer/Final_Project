@@ -71,8 +71,8 @@ def prepare_P_frame_for_compression(I_frame, P_frame, block_size=8, window_size=
             block_size: the size of the block we want to compress
             window_size: the size of the window we want to search for the most similar block
 
-    :return residuals_blocks: the residuals blocks
-            motion_vectors: the motion vectors
+    :return residuals_blocks: list of blocks that represent the difference between the current block and the most similar block in the I_frame
+            motion_vectors: list of tuples (row, col) of the differential location of the most similar block in the I_frame regarding the appropriate block in the P_frame
     """
     blocks_of_P_frame = JPEG_compressor.break_matrix_into_blocks(P_frame, block_size)
     blocks_centers = get_block_centers(P_frame, block_size)
@@ -137,16 +137,43 @@ def read_video_file_and_break_into_frames(video_file_path):
     cap.release()
     return frames_list, frame_count
 
-def encoding_motion_vectors(motion_vectors, compressed_file):
-    # TODO: implement the function
-    pass
+def encoding_motion_vectors(Y_motion_vectors, Cb_motion_vectors, Cr_motion_vectors, compressed_file):
+    with open(compressed_file, "w") as file:
+
+        # compressed file format such that each line will contain:
+        # 1: Y_motion_vectors encoded array
+        # 2: Y_motion_vectors huffman tree
+        # 3: Cb_motion_vectors encoded array
+        # 4: Cb_motion_vectors huffman tree
+        # 5: Cr_motion_vectors encoded array
+        # 6: Cr_motion_vectors huffman tree
+
+        Y_motion_vectors_values_to_encode = []
+        for row, col in Y_motion_vectors:
+            Y_motion_vectors_values_to_encode += [row, col]
+        Cb_motion_vectors_values_to_encode = []
+        for row, col in Cb_motion_vectors:
+            Cb_motion_vectors_values_to_encode += [row, col]
+        Cr_motion_vectors_values_to_encode = []
+        for row, col in Cr_motion_vectors:
+            Cr_motion_vectors_values_to_encode += [row, col]
+
+        for motion_vectors_values_to_encode in [Y_motion_vectors_values_to_encode, Cb_motion_vectors_values_to_encode, Cr_motion_vectors_values_to_encode]:
+            decoding_tree, encoding_block = JPEG_compressor.huffman_encode(motion_vectors_values_to_encode)
+            file.write(encoding_block)
+            file.write('\n')
+            decoding_tree_str = str(decoding_tree)
+            decoding_tree_str = decoding_tree_str.replace(" ", "")
+            file.write(decoding_tree_str)
+            file.write('\n')
+
+    return None
 
 def compress_video(video_file_path, QY, QC, I_frame_interval=10):
     # TODO: implement the inverse function of compress_video
 
     # TODO: set the global variable
     # TODO: arrange all the script files
-    # TODO: shrink the video length (seconds) and size (N*M)
     compressed_files_video_folder_global = "compressed_files_for_video"
     compressed_files_video_folder = video_file_path.split('/')[-1].split('.')[0]
     # if the folder does not exist, create it
@@ -207,13 +234,8 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10):
             JPEG_compressor.compress_image_for_video(P_frame_Cb_residuals, Cb_compressed_frame_file, QC, N2, M2)
             JPEG_compressor.compress_image_for_video(P_frame_Cr_residuals, Cr_compressed_frame_file, QC, N3, M3)
 
-            Y_motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Y_motion_vectors_frame_{i}.txt'
-            Cb_motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cb_motion_vectors_frame_{i}.txt'
-            Cr_motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cr_motion_vectors_frame_{i}.txt'
-
-            encoding_motion_vectors(P_frame_Y_motion_vectors, Y_motion_vectors_compressed_file)
-            encoding_motion_vectors(P_frame_Cb_motion_vectors, Cb_motion_vectors_compressed_file)
-            encoding_motion_vectors(P_frame_Cr_motion_vectors, Cr_motion_vectors_compressed_file)
+            motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/motion_vectors_frame_{i}.txt'
+            encoding_motion_vectors(P_frame_Y_motion_vectors, P_frame_Cb_motion_vectors, P_frame_Cr_motion_vectors, motion_vectors_compressed_file)
 
     return None
 
