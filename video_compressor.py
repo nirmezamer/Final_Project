@@ -173,6 +173,8 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10):
     ############################
 
     frames_list, frame_count = read_video_file_and_break_into_frames(video_file_path)
+    print(f"frame_count: {frame_count}")
+    print(f"len(frames_list): {len(frames_list)}")
     last_I_frame = None
     for i, frame in enumerate(frames_list):
         print("start to compress the ", i, " frame")
