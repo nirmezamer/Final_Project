@@ -7,12 +7,33 @@ def main():
 
     video_file_path = 'videos_to_compress/earth_video.mp4'
 
-    QY = luminance.get_QY_list()[0]
-    QC = chrominance.get_QC_list()[0]
+    # Getting lists of options for Quantization Matrices
+    QY_list = luminance.get_QY_list()
+    QC_list = chrominance.get_QC_list()
 
-    compress_video(video_file_path, QY, QC, I_frame_interval=10)
+    q = 1
+    QY = q*QY_list[0]
+    QC = q*QC_list[0]
 
-    return
+    # Reduction size
+    reduction_size = 1
+
+    # Declare list of videos to compress
+    videos_to_compress_path = "./videos_to_compress"
+    videos_names = os.listdir(videos_to_compress_path) # list of names of videos in the dir
+
+    for video_name in videos_names:
+
+        print(f"Starting to compress {video_name}")
+
+        # Compress video
+        compress_video(video_file_path, QY, QC, reduction_size)
+
+        print(f"Finished compressing {video_name}")
+
+
+
+
 
 if __name__ == '__main__':
     main()
