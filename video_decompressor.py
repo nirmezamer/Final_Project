@@ -81,6 +81,7 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
     last_I_frame_Cr = None
 
     for i in range(frame_count):
+        print("Starting to decompress frame", i)
         if i % I_frame_interval == 0:
             # I frame
 
@@ -97,7 +98,7 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
             last_I_frame_Cb = JPEG_compressor.shrink_matrix(last_I_frame_Cb, reduction_size)
             last_I_frame_Cr = JPEG_compressor.shrink_matrix(last_I_frame_Cr, reduction_size)
 
-    else:
+        else:
             # P frame
 
             # compress the P_frame by using JPEG compression
@@ -130,10 +131,14 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
     return None
 
 def main():
-    Y_motion_vectors, Cb_motion_vectors, Cr_motion_vectors = decoding_motion_vectors("./compressed_files_for_video/earth_video/motion_vectors_frame_1.txt")
-    print(Y_motion_vectors)
-    print(Cb_motion_vectors)
-    print(Cr_motion_vectors)
+
+    # declare the quantization matrices
+    import quantization_matrices.luminance as luminance
+    import quantization_matrices.chrominance as chrominance
+    QY = luminance.get_QY_list()[0]
+    QC = chrominance.get_QC_list()[0]
+
+    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC)
 
     return 0
 
