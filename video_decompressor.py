@@ -44,6 +44,9 @@ def create_video_from_frames(frames_list, video_file_path):
         out.write(frame)
     out.release()
 
+
+
+
 def decoding_motion_vectors(motion_vectors_compressed_file):
     """
     :param motion_vectors_compressed_file: str - Binary file name
@@ -140,7 +143,8 @@ def main():
     QY = luminance.get_QY_list()[0]
     QC = chrominance.get_QC_list()[0]
 
-    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC)
+
+    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC, I_frame_interval=5)
 
     return 0
 

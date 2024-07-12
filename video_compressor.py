@@ -250,7 +250,7 @@ def main():
     QY = luminance.get_QY_list()[0]
     QC = chrominance.get_QC_list()[0]
 
-    compress_video(video_file_path, QY, QC, I_frame_interval=10)
+    compress_video(video_file_path, QY, QC, I_frame_interval=5)
 
     return
 
