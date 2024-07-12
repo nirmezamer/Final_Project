@@ -119,6 +119,8 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
             restored_frame = JPEG_compressor.convert_YCbCr_to_RGB(restored_P_frame_Y, restored_P_frame_Cb, restored_P_frame_Cr)
             frames_list.append(restored_frame)
 
+    create_video_from_frames(frames_list, f"{video_file_path}")
+
     return None
 
 def main():
