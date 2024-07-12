@@ -161,7 +161,7 @@ def encoding_motion_vectors(Y_motion_vectors, Cb_motion_vectors, Cr_motion_vecto
 
     return None
 
-def compress_video(video_file_path, QY, QC, I_frame_interval=10):
+def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=1):
     # TODO: implement the inverse function of compress_video
 
     compressed_files_video_folder_global = "compressed_files_for_video"
@@ -169,7 +169,7 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10):
     # if the folder does not exist, create it
     if not os.path.exists(f'{compressed_files_video_folder_global}/{compressed_files_video_folder}'):
         os.makedirs(f'{compressed_files_video_folder_global}/{compressed_files_video_folder}')
-    reduction_size = 1
+
     ############################
 
     frames_list, frame_count = read_video_file_and_break_into_frames(video_file_path)

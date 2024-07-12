@@ -101,7 +101,7 @@ def IDCT(block):
     return block_idct
 
 
-def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M):
+def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M, return_blocks=False):
     """
     :param zigzag_blocks_list: list of (k^2 length) lists after zigzagging
     :param Q: 2d array (k*k size)
@@ -122,6 +122,10 @@ def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M):
         restored_block = np.clip(restored_block, 0, 255)
         restored_block = restored_block.astype(np.uint8)
         restored_blocks_list.append(restored_block)
+
+    # added for the video decompression
+    if return_blocks:
+        return restored_blocks_list
 
     # create the matrix out of all the blocks compose it
     matrix = merge_blocks_into_matrix(restored_blocks_list, k, N, M)
@@ -202,6 +206,14 @@ def decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, 
 
     decompressed_image = convert_YCbCr_to_RGB(Y_matrix, Cb_matrix, Cr_matrix)
     return decompressed_image
+
+def decompress_image_for_video(compressed_file, Q):
+
+    block_size = Q.shape[0] * Q.shape[1]
+    zigzag_blocks_list, N, M = decoding_image(compressed_file, block_size)
+    residuals_blocks = restoring_image_after_decompress(zigzag_blocks_list, Q, N, M, return_blocks=True)
+
+    return residuals_blocks
 
 def main():
     return None
