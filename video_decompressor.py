@@ -1,10 +1,12 @@
 import ast
 
 import cv2
+import numpy as np
+
 import JPEG_decompress
 import JPEG_compressor
 
-def reconstruct_P_frame_component_blocks(I_frame, residuals_blocks_list, motion_vectors_list, block_size):
+def reconstruct_P_frame_component(I_frame, residuals_blocks_list, motion_vectors_list, block_size=8):
     """
     :param I_frame: the I_frame we used to compress the P_frame
     :param residuals_blocks_list: list of all P_blocks minos (-) the most similar blocks in the I_frame
@@ -20,6 +22,10 @@ def reconstruct_P_frame_component_blocks(I_frame, residuals_blocks_list, motion_
         extract_similar_block = I_frame[row - margin: row + margin, col - margin: col + margin]
         P_frame = extract_similar_block - residual_block
         reconstructed_blocks.append(P_frame)
+
+    rows, cols = np.shape(I_frame)
+    P_frame_component = JPEG_decompress.merge_blocks_into_matrix(reconstructed_blocks, block_size, rows, cols)
+    return P_frame_component
 
 def create_video_from_frames(frames_list, video_file_path):
     """
@@ -107,9 +113,9 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
 
             Y_motion_vectors, Cb_motion_vectors, Cr_motion_vectors = decoding_motion_vectors(motion_vectors_compressed_file)
 
-            restored_P_frame_Y = reconstruct_P_frame_component_blocks(last_I_frame_Y, Y_residuals_blocks, Y_motion_vectors, block_size=QC.shape[0])
-            restored_P_frame_Cb = reconstruct_P_frame_component_blocks(last_I_frame_Cb, Cb_residuals_blocks, Cb_motion_vectors, block_size=QC.shape[0])
-            restored_P_frame_Cr = reconstruct_P_frame_component_blocks(last_I_frame_Cr, Cr_residuals_blocks, Cr_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_Y = reconstruct_P_frame_component(last_I_frame_Y, Y_residuals_blocks, Y_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_Cb = reconstruct_P_frame_component(last_I_frame_Cb, Cb_residuals_blocks, Cb_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_Cr = reconstruct_P_frame_component(last_I_frame_Cr, Cr_residuals_blocks, Cr_motion_vectors, block_size=QC.shape[0])
 
             # expand the matrices to the original size
             restored_P_frame_Cb = JPEG_compressor.expand_matrix(restored_P_frame_Cb, reduction_size)
