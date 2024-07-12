@@ -84,9 +84,9 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
             Cb_motion_vectors = None
             Cr_motion_vectors = None
 
-            restored_P_frame_Y = decompress_P_frame(last_I_frame_Y, Y_residuals_blocks, Y_motion_vectors, block_size=QC.shape[0])
-            restored_P_frame_Cb = decompress_P_frame(last_I_frame_Cb, Cb_residuals_blocks, Cb_motion_vectors, block_size=QC.shape[0])
-            restored_P_frame_Cr = decompress_P_frame(last_I_frame_Cr, Cr_residuals_blocks, Cr_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_Y = reconstruct_P_frame_component_blocks(last_I_frame_Y, Y_residuals_blocks, Y_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_Cb = reconstruct_P_frame_component_blocks(last_I_frame_Cb, Cb_residuals_blocks, Cb_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_Cr = reconstruct_P_frame_component_blocks(last_I_frame_Cr, Cr_residuals_blocks, Cr_motion_vectors, block_size=QC.shape[0])
 
             # expand the matrices to the original size
             restored_P_frame_Cb = JPEG_compressor.expand_matrix(restored_P_frame_Cb, reduction_size)
