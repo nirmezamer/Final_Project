@@ -84,7 +84,7 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
         if i % I_frame_interval == 0:
             # I frame
 
-            # compress the I_frame by using JPEG compression
+            # decompress the I_frame by using JPEG decompression
             Y_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Y_compressed_frame_{i}.txt'
             Cb_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cb_compressed_frame_{i}.txt'
             Cr_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cr_compressed_frame_{i}.txt'

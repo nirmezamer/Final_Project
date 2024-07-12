@@ -29,6 +29,13 @@ def main():
         # Compress video
         compress_video(video_file_path, QY, QC, reduction_size)
 
+        # after compression, the compressed files of the video are saved in the compressed_files_for_video folder
+
+        # Decompress video
+        
+
+
+
         print(f"Finished compressing {video_name}")
 
 
