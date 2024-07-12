@@ -2,7 +2,7 @@ import ast
 
 import cv2
 import numpy as np
-
+from video_compressor import *
 import JPEG_decompress
 import JPEG_compressor
 
@@ -14,11 +14,13 @@ def reconstruct_P_frame_component(I_frame, residuals_blocks_list, motion_vectors
     :param block_size: block size
     :return: list of all the blocks of the reconstructed the P_frame component
     """
-
+    block_centers = get_block_centers(I_frame, block_size)
     reconstructed_blocks = []
     margin = block_size // 2
     for i, residual_block in enumerate(residuals_blocks_list):
-        row, col = motion_vectors_list[i]
+        # import pdb; pdb.set_trace()
+        row = motion_vectors_list[i][0] + block_centers[i][0]
+        col = motion_vectors_list[i][1] + block_centers[i][1]
         extract_similar_block = I_frame[row - margin: row + margin, col - margin: col + margin]
         P_frame = extract_similar_block - residual_block
         reconstructed_blocks.append(P_frame)
@@ -119,11 +121,11 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
             restored_P_frame_Cr = reconstruct_P_frame_component(last_I_frame_Cr, Cr_residuals_blocks, Cr_motion_vectors, block_size=QC.shape[0])
 
             # expand the matrices to the original size
-            restored_P_frame_Cb = JPEG_compressor.expand_matrix(restored_P_frame_Cb, reduction_size)
-            restored_P_frame_Cr = JPEG_compressor.expand_matrix(restored_P_frame_Cr, reduction_size)
+            restored_P_frame_Cb = JPEG_decompress.expand_matrix(restored_P_frame_Cb, reduction_size)
+            restored_P_frame_Cr = JPEG_decompress.expand_matrix(restored_P_frame_Cr, reduction_size)
 
             # restore the frame
-            restored_frame = JPEG_compressor.convert_YCbCr_to_RGB(restored_P_frame_Y, restored_P_frame_Cb, restored_P_frame_Cr)
+            restored_frame = JPEG_decompress.convert_YCbCr_to_RGB(restored_P_frame_Y, restored_P_frame_Cb, restored_P_frame_Cr)
             frames_list.append(restored_frame)
 
     create_video_from_frames(frames_list, f"{video_file_path}")

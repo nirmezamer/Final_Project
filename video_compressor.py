@@ -162,6 +162,14 @@ def encoding_motion_vectors(Y_motion_vectors, Cb_motion_vectors, Cr_motion_vecto
     return None
 
 def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=1):
+    """
+    :param video_file_path: str - path to the video file
+    :param QY: quantization matrix for Y component
+    :param QC: quantization matrix for Cb and Cr components
+    :param I_frame_interval: interval between I frames
+    :param reduction_size: int - the size to reduce the Cb and Cr components
+    :return: None
+    """
     # TODO: implement the inverse function of compress_video
 
     compressed_files_video_folder_global = "compressed_files_for_video"
