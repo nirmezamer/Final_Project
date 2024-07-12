@@ -2,22 +2,22 @@ import cv2
 import JPEG_decompress
 import JPEG_compressor
 
-def decompress_P_frame(I_frame, residuals_blocks, motion_vectors, block_size):
+def reconstruct_P_frame_component_blocks(I_frame, residuals_blocks_list, motion_vectors_list, block_size):
     """
-    :param I_frame:
-    :param residuals_blocks:
-    :param motion_vectors:
-    :param block_size:
-    :return: the original frame
+    :param I_frame: the I_frame we used to compress the P_frame
+    :param residuals_blocks_list: list of all P_blocks minos (-) the most similar blocks in the I_frame
+    :param motion_vectors_list: list of all the differential blocks
+    :param block_size: block size
+    :return: list of all the blocks of the reconstructed the P_frame component
     """
 
-    restored_blocks = []
+    reconstructed_blocks = []
     margin = block_size // 2
-    for i, residual_block in enumerate(residuals_blocks):
-        row, col = motion_vectors[i]
+    for i, residual_block in enumerate(residuals_blocks_list):
+        row, col = motion_vectors_list[i]
         extract_similar_block = I_frame[row - margin: row + margin, col - margin: col + margin]
         P_frame = extract_similar_block - residual_block
-        restored_blocks.append(P_frame)
+        reconstructed_blocks.append(P_frame)
 
 def create_video_from_frames(frames_list, video_file_path):
     """
