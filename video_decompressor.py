@@ -1,3 +1,5 @@
+import ast
+
 import cv2
 import JPEG_decompress
 import JPEG_compressor
@@ -34,7 +36,30 @@ def create_video_from_frames(frames_list, video_file_path):
         out.write(frame)
     out.release()
 
+def decoding_motion_vectors(motion_vectors_compressed_file):
+    """
+    :param motion_vectors_compressed_file: str - Binary file name
+    :return: list of motion vectors
+    """
 
+    motion_vectors = dict()
+    with open(motion_vectors_compressed_file, "r") as file:
+        for component in ["Y", "Cb", "Cr"]:
+            encoded_motion_vectors = file.readline()[:-1]
+            decoding_tree = file.readline()
+            decoding_tree = ast.literal_eval(decoding_tree)  # build the dictionary
+            restored_motion_vectors = JPEG_decompress.huffman_decode(decoding_tree, encoded_motion_vectors)
+            motion_vectors[component] = restored_motion_vectors
+
+    for component in ["Y", "Cb", "Cr"]:
+        new_motion_vector = []
+        motion_vector = motion_vectors[component]
+        motion_vector_length = len(motion_vector)
+        for i in range(0, motion_vector_length, 2):
+            new_motion_vector.append((motion_vector[i], motion_vector[i + 1]))
+        motion_vectors[component] = new_motion_vector
+
+    return motion_vectors["Y"], motion_vectors["Cb"], motion_vectors["Cr"]
 
 
 
@@ -80,9 +105,7 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
 
             motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/motion_vectors_frame_{i}.txt'
 
-            Y_motion_vectors = None
-            Cb_motion_vectors = None
-            Cr_motion_vectors = None
+            Y_motion_vectors, Cb_motion_vectors, Cr_motion_vectors = decoding_motion_vectors(motion_vectors_compressed_file)
 
             restored_P_frame_Y = reconstruct_P_frame_component_blocks(last_I_frame_Y, Y_residuals_blocks, Y_motion_vectors, block_size=QC.shape[0])
             restored_P_frame_Cb = reconstruct_P_frame_component_blocks(last_I_frame_Cb, Cb_residuals_blocks, Cb_motion_vectors, block_size=QC.shape[0])
@@ -99,7 +122,12 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
     return None
 
 def main():
-    pass
+    Y_motion_vectors, Cb_motion_vectors, Cr_motion_vectors = decoding_motion_vectors("./compressed_files_for_video/earth_video/motion_vectors_frame_1.txt")
+    print(Y_motion_vectors)
+    print(Cb_motion_vectors)
+    print(Cr_motion_vectors)
+
+    return 0
 
 if __name__ == '__main__':
     main()
