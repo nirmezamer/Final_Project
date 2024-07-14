@@ -111,16 +111,17 @@ def proccessing_image_before_compress(mat, Q, break_matrix_into_blocks_bool=True
         blocks_list = list_of_blocks
     zigzag_blocks_list = []
     for block in blocks_list:
-        block = block.astype(np.int32)
-        # centering the block values
-        block = block - 128
-        block = DCT(block)
-        # divide and round to floor the block values
-        block = block / Q
-        block = np.round(block)
-        # create the list of zigzag blocks
-        block = zigzag(block, k)
-        zigzag_blocks_list.append(block)
+        if break_matrix_into_blocks_bool:
+            block = block.astype(np.int32)
+            # centering the block values
+            block = block - 128
+            block = DCT(block)
+            # divide and round to floor the block values
+            block = block / Q
+            block = np.round(block)
+            # create the list of zigzag blocks
+            block = zigzag(block, k)
+            zigzag_blocks_list.append(block)
     return zigzag_blocks_list
 
 def huffman_encode(block):
