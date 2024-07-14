@@ -114,13 +114,16 @@ def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M, return_blocks=
     # create the original block out of its zigzag travel vector
     for zigzag_block in zigzag_blocks_list:
         restored_block = inverse_zigzag(zigzag_block, k)
-        # multiply and round to floor the restored_block
-        restored_block = restored_block*Q
-        restored_block = IDCT(restored_block)
-        restored_block = restored_block + 128
-        # limit the values of the array to be within the range [0,255]
-        restored_block = np.clip(restored_block, 0, 255)
-        restored_block = restored_block.astype(np.uint8)
+        if not return_blocks:
+            # multiply and round to floor the restored_block
+            restored_block = restored_block*Q
+            restored_block = IDCT(restored_block)
+            restored_block = restored_block + 128
+            # limit the values of the array to be within the range [0,255]
+            restored_block = np.clip(restored_block, 0, 255)
+            restored_block = restored_block.astype(np.uint8)
+        else:
+            restored_block = restored_block.astype(np.int32)
         restored_blocks_list.append(restored_block)
 
     # added for the video decompression

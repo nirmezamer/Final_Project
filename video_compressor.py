@@ -1,6 +1,8 @@
-import time
+
 import numpy as np
 import cv2
+from tqdm import tqdm
+
 import JPEG_compressor
 import os
 
@@ -184,8 +186,9 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=
     print(f"frame_count: {frame_count}")
     print(f"len(frames_list): {len(frames_list)}")
     last_I_frame = None
-    for i, frame in enumerate(frames_list):
-        print("start to compress the ", i, " frame")
+    for i in tqdm(range(len((frames_list)))):
+        frame = frames_list[i]
+        frame = frame.astype(np.int32)
         if i % I_frame_interval == 0:
             # Save the last I frame components for the next P frames
             last_I_frame_Y, last_I_frame_Cb, last_I_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(frame)
@@ -212,14 +215,7 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=
 
             # TODO: Guy to implement the inverse function of prepare_P_frame_for_compression
             # Prepare the P_frame for compression
-            start_time = time.time()  # Record the start time
-
             P_frame_Y_residuals, P_frame_Y_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_Y, P_frame_Y, block_size=QY.shape[0], window_size=32)
-
-            end_time = time.time()  # Record the end time
-
-            elapsed_time = end_time - start_time  # Calculate the elapsed time
-            print(f"The prepare_P_frame_for_compression function took {elapsed_time:.2f} seconds to complete.")
             P_frame_Cb_residuals, P_frame_Cb_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_Cb, P_frame_Cb, block_size=QC.shape[0], window_size=32)
             P_frame_Cr_residuals, P_frame_Cr_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_Cr, P_frame_Cr, block_size=QC.shape[0], window_size=32)
 
@@ -250,7 +246,7 @@ def main():
     QY = luminance.get_QY_list()[0]
     QC = chrominance.get_QC_list()[0]
 
-    compress_video(video_file_path, QY, QC, I_frame_interval=5)
+    compress_video(video_file_path, QY, QC, I_frame_interval=10)
 
     return
 

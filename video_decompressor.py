@@ -1,7 +1,6 @@
 import ast
+from tqdm import tqdm
 
-import cv2
-import numpy as np
 from video_compressor import *
 import JPEG_decompress
 import JPEG_compressor
@@ -85,8 +84,7 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
     last_I_frame_Cb = None
     last_I_frame_Cr = None
 
-    for i in range(frame_count):
-        print("Starting to decompress frame", i)
+    for i in tqdm(range(frame_count)):
         if i % I_frame_interval == 0:
             # I frame
 
@@ -144,7 +142,7 @@ def main():
     QC = chrominance.get_QC_list()[0]
 
 
-    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC, I_frame_interval=5)
+    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC, I_frame_interval=10)
 
     return 0
 
