@@ -142,7 +142,7 @@ def main():
     QC = chrominance.get_QC_list()[0]
 
 
-    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC, I_frame_interval=10)
+    decompress_video(93, f"restored_videos/earth_video.mp4", QY, QC, I_frame_interval=10)
 
     return 0
 

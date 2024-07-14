@@ -88,7 +88,7 @@ def prepare_P_frame_component_for_compression(I_frame, P_frame, block_size=8, wi
     for i, P_block in enumerate(blocks_of_P_frame):
         # find the most similar block using motion vector
         most_similar_block, motion_vec = find_the_most_similar_block(P_block, I_frame, blocks_centers[i], blocks_centers[i], window_size)
-        residuals_blocks.append(P_block - most_similar_block)
+        residuals_blocks.append(most_similar_block - P_block)
         motion_vectors.append(motion_vec)
 
     return residuals_blocks, motion_vectors
