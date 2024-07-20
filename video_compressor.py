@@ -231,7 +231,7 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=
             motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/motion_vectors_frame_{i}.txt'
             encoding_motion_vectors(P_frame_Y_motion_vectors, P_frame_Cb_motion_vectors, P_frame_Cr_motion_vectors, motion_vectors_compressed_file)
 
-    return None
+    return frame_count
 
 def main():
     video_file_path = 'videos_to_compress/earth_video.mp4'

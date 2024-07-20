@@ -2,6 +2,47 @@ from video_compressor import *
 from video_decompressor import *
 import quantization_matrices.luminance as luminance
 import quantization_matrices.chrominance as chrominance
+import JPEG_tester
+from tqdm import tqdm
+
+def calculate_RMS(original_video_path, restored_video_path):
+    original_video_frames_list, original_video_frames_count = read_video_file_and_break_into_frames(original_video_path)
+    restored_video_frames_list, restored_video_frames_count = read_video_file_and_break_into_frames(restored_video_path)
+
+    assert original_video_frames_count == restored_video_frames_count # check if the number of frames is the same
+
+    sum_of_MSE = 0
+
+    for i in tqdm(range(original_video_frames_count)):
+        original_frame = original_video_frames_list[i]
+        restored_frame = restored_video_frames_list[i]
+
+        sum_of_MSE += np.mean(np.square(original_frame.flatten() - restored_frame.flatten()))
+
+    rms = np.sqrt(sum_of_MSE / original_video_frames_count)
+
+    return rms
+
+def calc_compression_ratio(original_video_path, I_frame_interval=10):
+    original_video_frames_list, original_video_frames_count = read_video_file_and_break_into_frames(original_video_path)
+
+    commutative_compression_ratio = 0
+    video_name = original_video_path.split('/')[-1].split('.')[0]
+
+    for i in tqdm(range(original_video_frames_count)):
+        original_frame = original_video_frames_list[i]
+
+        Y_compressed_file = f'compressed_files_for_video/{video_name}/Y_compressed_frame_{i}.txt'
+        Cb_compressed_file = f'compressed_files_for_video/{video_name}/Cb_compressed_frame_{i}.txt'
+        Cr_compressed_file = f'compressed_files_for_video/{video_name}/Cr_compressed_frame_{i}.txt'
+        motion_vectors_compressed_file = None
+
+        if i % I_frame_interval != 0:
+            motion_vectors_compressed_file = f'compressed_files_for_video/{video_name}/motion_vectors_frame_{i}.txt'
+
+        commutative_compression_ratio += JPEG_tester.calc_compression_ratio(original_frame, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, motion_vectors_compressed_file)
+
+    return commutative_compression_ratio/original_video_frames_count
 
 def main():
 
@@ -29,15 +70,12 @@ def main():
 
         # Compress video
         video_file_path = f"{videos_to_compress_path}/{video_name}"
-        compress_video(video_file_path, QY, QC, reduction_size=reduction_size)
+        frame_count = compress_video(video_file_path, QY, QC, reduction_size=reduction_size)
 
         # after compression, the compressed files of the video are saved in the compressed_files_for_video folder
 
         # Decompress video
-        decompress_video(301, f"restored_videos/{video_name}", QY, QC, reduction_size=reduction_size)
-        
-
-
+        decompress_video(frame_count, f"restored_videos/{video_name}", QY, QC, reduction_size=reduction_size)
 
         print(f"Finished compressing {video_name}")
 
@@ -46,4 +84,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    rms = calculate_RMS('videos_to_compress/earth_video.mp4', 'restored_videos/earth_video.mp4')
+    print(f"RMS: {rms}")
+
+    compression_ratio = calc_compression_ratio('videos_to_compress/earth_video.mp4')
+    print(f"Compression ratio: {compression_ratio}")

@@ -15,7 +15,7 @@ from skimage import io, filters
 
 # Notice that the order of the input images matters!
 
-def calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file):
+def calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, motion_vectors_compressed_file=None):
     """
     :param img: 2d-array of the image
     :param Y_compressed_file: str - Binary file name
@@ -47,6 +47,16 @@ def calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compre
             compressed_image_num_of_bits += 8 * len(decoding_tree)
             # The encoding block is presented as a binary stream, Thus every char uses 1 bit
             compressed_image_num_of_bits += 1 * len(encoding_block)
+
+    if motion_vectors_compressed_file is not None:
+        with open(motion_vectors_compressed_file, "r") as file:
+            for _ in range(3):
+                encoding_block = file.readline()
+                decoding_tree = file.readline()
+                # The huffman tree is presented as a stream of chars, Thus every char uses byte (== 8 bits)
+                compressed_image_num_of_bits += 8 * len(decoding_tree)
+                # The encoding block is presented as a binary stream, Thus every char uses 1 bit
+                compressed_image_num_of_bits += 1 * len(encoding_block)
 
     compression_ratio = original_image_num_of_bits / compressed_image_num_of_bits
     return compression_ratio
