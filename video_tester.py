@@ -84,8 +84,10 @@ def main():
 
 
 if __name__ == '__main__':
-    rms = calculate_RMS('videos_to_compress/earth_video.mp4', 'restored_videos/earth_video.mp4')
-    print(f"RMS: {rms}")
+    # rms = calculate_RMS('videos_to_compress/earth_video.mp4', 'restored_videos/earth_video.mp4')
+    # print(f"RMS: {rms}")
+    #
+    # compression_ratio = calc_compression_ratio('videos_to_compress/earth_video.mp4')
+    # print(f"Compression ratio: {compression_ratio}")
 
-    compression_ratio = calc_compression_ratio('videos_to_compress/earth_video.mp4')
-    print(f"Compression ratio: {compression_ratio}")
+    main()
