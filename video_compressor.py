@@ -131,36 +131,43 @@ def read_video_file_and_break_into_frames(video_file_path):
     cap.release()
     return frames_list, frame_count
 
+
 def encoding_motion_vectors(Y_motion_vectors, Cb_motion_vectors, Cr_motion_vectors, compressed_file):
+    # Helper function to process vectors
+    def process_vectors(motion_vectors):
+        values_to_encode = []
+        for row, col in motion_vectors:
+            values_to_encode += [row, col]
+        return values_to_encode
+
+    # Process motion vectors
+    Y_motion_vectors_values_to_encode = process_vectors(Y_motion_vectors)
+    Cb_motion_vectors_values_to_encode = process_vectors(Cb_motion_vectors)
+    Cr_motion_vectors_values_to_encode = process_vectors(Cr_motion_vectors)
+
+    # Check if all motion vectors are (0, 0) for each component
+    def check_all_zeros(motion_vectors_values_to_encode):
+        return all(value == 0 for value in motion_vectors_values_to_encode)
+    
     with open(compressed_file, "w") as file:
-
-        # compressed file format such that each line will contain:
-        # 1: Y_motion_vectors encoded array
-        # 2: Y_motion_vectors huffman tree
-        # 3: Cb_motion_vectors encoded array
-        # 4: Cb_motion_vectors huffman tree
-        # 5: Cr_motion_vectors encoded array
-        # 6: Cr_motion_vectors huffman tree
-
-        Y_motion_vectors_values_to_encode = []
-        for row, col in Y_motion_vectors:
-            Y_motion_vectors_values_to_encode += [row, col]
-        Cb_motion_vectors_values_to_encode = []
-        for row, col in Cb_motion_vectors:
-            Cb_motion_vectors_values_to_encode += [row, col]
-        Cr_motion_vectors_values_to_encode = []
-        for row, col in Cr_motion_vectors:
-            Cr_motion_vectors_values_to_encode += [row, col]
-
         for motion_vectors_values_to_encode in [Y_motion_vectors_values_to_encode, Cb_motion_vectors_values_to_encode, Cr_motion_vectors_values_to_encode]:
-            decoding_tree, encoding_block = JPEG_compressor.huffman_encode(motion_vectors_values_to_encode)
-            file.write(encoding_block)
+            if check_all_zeros(motion_vectors_values_to_encode):
+                # Encode the number of motion vectors
+                num_vectors = len(motion_vectors_values_to_encode) // 2  # Each motion vector has 2 values (row, col)
+                encoding_block = str(num_vectors)
+                decoding_tree = JPEG_compressor.huffman_encode([0])[0]  # Assuming huffman_encode returns (decoding_tree, encoding_block)
+            else:
+                decoding_tree, encoding_block = JPEG_compressor.huffman_encode(motion_vectors_values_to_encode)
+            
+            # Ensure encoding_block is a string
+            file.write(str(encoding_block))
             file.write('\n')
-            decoding_tree_str = str(decoding_tree)
-            decoding_tree_str = decoding_tree_str.replace(" ", "")
+            
+            # Ensure decoding_tree_str is a string
+            decoding_tree_str = str(decoding_tree).replace(" ", "")
             file.write(decoding_tree_str)
             file.write('\n')
-
+            
     return None
 
 def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=1):
@@ -246,7 +253,7 @@ def main():
     QY = luminance.get_QY_list()[0]
     QC = chrominance.get_QC_list()[0]
 
-    compress_video(video_file_path, QY, QC, I_frame_interval=10)
+    compress_video(video_file_path, QY, QC, I_frame_interval=1)
 
     return
 

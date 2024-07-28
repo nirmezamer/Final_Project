@@ -44,32 +44,41 @@ def create_video_from_frames(frames_list, video_file_path):
     out.release()
 
 
-
-
 def decoding_motion_vectors(motion_vectors_compressed_file):
     """
     :param motion_vectors_compressed_file: str - Binary file name
     :return: list of motion vectors
     """
-
     motion_vectors = dict()
     with open(motion_vectors_compressed_file, "r") as file:
         for component in ["Y", "Cb", "Cr"]:
-            encoded_motion_vectors = file.readline()[:-1]
-            decoding_tree = file.readline()
-            decoding_tree = ast.literal_eval(decoding_tree)  # build the dictionary
-            restored_motion_vectors = JPEG_decompress.huffman_decode(decoding_tree, encoded_motion_vectors)
-            motion_vectors[component] = restored_motion_vectors
+            encoded_motion_vectors = file.readline().strip()
+            decoding_tree = file.readline().strip()
+            # Check if the line contains only an integer followed by (0,)
+            if encoded_motion_vectors.isdigit() and decoding_tree == "(0,)":
+                size = int(encoded_motion_vectors)
+                # Create an array of size with tuples of (0, 0)
+                motion_vectors[component] = [(0, 0)] * size
+            else:
+                # If not, continue with the normal decoding
+                decoding_tree = ast.literal_eval(decoding_tree)  # build the dictionary
+                restored_motion_vectors = JPEG_decompress.huffman_decode(decoding_tree, encoded_motion_vectors)
+                motion_vectors[component] = restored_motion_vectors
 
     for component in ["Y", "Cb", "Cr"]:
+        if component not in motion_vectors:
+            continue
         new_motion_vector = []
         motion_vector = motion_vectors[component]
+        if isinstance(motion_vector[0], tuple) and motion_vector[0] == (0, 0):
+            continue  # Skip if the motion vector is already a list of tuples (0, 0)
         motion_vector_length = len(motion_vector)
         for i in range(0, motion_vector_length, 2):
             new_motion_vector.append((motion_vector[i], motion_vector[i + 1]))
         motion_vectors[component] = new_motion_vector
 
     return motion_vectors["Y"], motion_vectors["Cb"], motion_vectors["Cr"]
+
 
 
 
@@ -142,7 +151,7 @@ def main():
     QC = chrominance.get_QC_list()[0]
 
 
-    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC, I_frame_interval=10)
+    decompress_video(301, f"restored_videos/earth_video.mp4", QY, QC, I_frame_interval=1)
 
     return 0
 

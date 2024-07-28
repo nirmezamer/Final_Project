@@ -26,7 +26,8 @@ def calculate_RMS(original_video_path, restored_video_path):
 def calc_compression_ratio(original_video_path, I_frame_interval=10):
     original_video_frames_list, original_video_frames_count = read_video_file_and_break_into_frames(original_video_path)
 
-    commutative_compression_ratio = 0
+    cum_original_bits = 0
+    cum_compressed_bits = 0
     video_name = original_video_path.split('/')[-1].split('.')[0]
 
     for i in tqdm(range(original_video_frames_count)):
@@ -40,9 +41,12 @@ def calc_compression_ratio(original_video_path, I_frame_interval=10):
         if i % I_frame_interval != 0:
             motion_vectors_compressed_file = f'compressed_files_for_video/{video_name}/motion_vectors_frame_{i}.txt'
 
-        commutative_compression_ratio += JPEG_tester.calc_compression_ratio(original_frame, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, motion_vectors_compressed_file)
+        curr_original_bits, curr_compressed_bits = JPEG_tester.calc_compression_ratio(original_frame, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, motion_vectors_compressed_file, for_video=True)
+        cum_original_bits += curr_original_bits
+        cum_compressed_bits += curr_compressed_bits
 
-    return commutative_compression_ratio/original_video_frames_count
+    return cum_original_bits/cum_compressed_bits
+
 
 def main():
 
@@ -70,12 +74,12 @@ def main():
 
         # Compress video
         video_file_path = f"{videos_to_compress_path}/{video_name}"
-        frame_count = compress_video(video_file_path, QY, QC, reduction_size=reduction_size)
+        frame_count = compress_video(video_file_path, QY, QC, reduction_size=reduction_size,I_frame_interval=10)
 
         # after compression, the compressed files of the video are saved in the compressed_files_for_video folder
 
         # Decompress video
-        decompress_video(frame_count, f"restored_videos/{video_name}", QY, QC, reduction_size=reduction_size)
+        decompress_video(frame_count, f"restored_videos/{video_name}", QY, QC, reduction_size=reduction_size, I_frame_interval=10)
 
         print(f"Finished compressing {video_name}")
 
@@ -84,10 +88,10 @@ def main():
 
 
 if __name__ == '__main__':
-    # rms = calculate_RMS('videos_to_compress/earth_video.mp4', 'restored_videos/earth_video.mp4')
-    # print(f"RMS: {rms}")
-    #
-    # compression_ratio = calc_compression_ratio('videos_to_compress/earth_video.mp4')
-    # print(f"Compression ratio: {compression_ratio}")
-
     main()
+
+    rms = calculate_RMS('videos_to_compress/earth_video.mp4', 'restored_videos/earth_video.mp4')
+    print(f"RMS: {rms}")
+    
+    compression_ratio = calc_compression_ratio('videos_to_compress/earth_video.mp4', I_frame_interval=10)
+    print(f"Compression ratio: {compression_ratio}")
