@@ -188,6 +188,8 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=
         os.makedirs(f'{compressed_files_video_folder_global}/{compressed_files_video_folder}')
 
     ############################
+    block_size = QY.shape[0]
+    assert (block_size == QC.shape[0])
 
     frames_list, frame_count = read_video_file_and_break_into_frames(video_file_path)
     print(f"frame_count: {frame_count}")
@@ -196,6 +198,13 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=
     for i in tqdm(range(len((frames_list)))):
         frame = frames_list[i]
         frame = frame.astype(np.int32)
+
+        # cut the frame size to be divisible by reduction_size*block_size
+        d = reduction_size * block_size
+        frame_shape = np.shape(frame)
+        N, M = frame_shape[0], frame_shape[1]
+        frame = frame[:(N // d) * d, :(M // d) * d, :]
+
         if i % I_frame_interval == 0:
             # Save the last I frame components for the next P frames
             last_I_frame_Y, last_I_frame_Cb, last_I_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(frame)
