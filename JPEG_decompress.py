@@ -18,7 +18,9 @@ def convert_YCbCr_to_RGB(Y_matrix, Cb_matrix, Cr_matrix):
 
     # Stack the channels to form the RGB image
     RGB_img = np.stack((R, G, B), axis=-1)
+
     RGB_img = np.clip(RGB_img, 0, 255).astype(np.uint8)
+
     return RGB_img
 
 def expand_matrix(mat, reduction_size):
@@ -114,16 +116,13 @@ def restoring_image_after_decompress(zigzag_blocks_list, Q, N, M, return_blocks=
     # create the original block out of its zigzag travel vector
     for zigzag_block in zigzag_blocks_list:
         restored_block = inverse_zigzag(zigzag_block, k)
-        if not return_blocks:
-            # multiply and round to floor the restored_block
-            restored_block = restored_block*Q
-            restored_block = IDCT(restored_block)
-            restored_block = restored_block + 128
-            # limit the values of the array to be within the range [0,255]
-            restored_block = np.clip(restored_block, 0, 255)
-            restored_block = restored_block.astype(np.uint8)
-        else:
-            restored_block = restored_block.astype(np.int32)
+        # multiply and round to floor the restored_block
+        restored_block = restored_block*Q
+        restored_block = IDCT(restored_block)
+        restored_block = restored_block + 128
+        # limit the values of the array to be within the range [0,255]
+        restored_block = np.clip(restored_block, 0, 255)
+        restored_block = restored_block.astype(np.int32)
         restored_blocks_list.append(restored_block)
 
     # added for the video decompression
@@ -209,14 +208,6 @@ def decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, 
 
     decompressed_image = convert_YCbCr_to_RGB(Y_matrix, Cb_matrix, Cr_matrix)
     return decompressed_image
-
-def decompress_image_for_video(compressed_file, Q):
-
-    block_size = Q.shape[0] * Q.shape[1]
-    zigzag_blocks_list, N, M = decoding_image(compressed_file, block_size)
-    residuals_blocks = restoring_image_after_decompress(zigzag_blocks_list, Q, N, M, return_blocks=True)
-
-    return residuals_blocks
 
 def main():
     return None

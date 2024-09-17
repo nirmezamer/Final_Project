@@ -4,6 +4,7 @@ import cv2
 from tqdm import tqdm
 
 import JPEG_compressor
+import JPEG_decompress
 import os
 
 def find_the_most_similar_block(P_block, previous_frame, start_position, curr_center, window_size=32):
@@ -25,7 +26,7 @@ def find_the_most_similar_block(P_block, previous_frame, start_position, curr_ce
         return curr_I_block, motion_vec
 
     # checking whether the difference between the parallel blocks does not exceed the threshold
-    if np.mean(np.square(P_block - curr_I_block)) < 25:
+    if np.mean(np.square(P_block - curr_I_block)) < 10000000:
         return curr_I_block, motion_vec
 
     locations = []
@@ -91,6 +92,9 @@ def prepare_P_frame_component_for_compression(I_frame, P_frame, block_size=8, wi
         residuals_blocks.append(most_similar_block - P_block)
         motion_vectors.append(motion_vec)
 
+    rows, cols = np.shape(I_frame)
+    residuals_blocks = JPEG_decompress.merge_blocks_into_matrix(residuals_blocks, block_size, rows, cols)
+
     return residuals_blocks, motion_vectors
 
 def get_block_centers(frame, block_size=8):
@@ -127,6 +131,7 @@ def read_video_file_and_break_into_frames(video_file_path):
         ret, frame = cap.read()
         if not ret:
             break
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frames_list.append(frame)
     cap.release()
     return frames_list, frame_count
@@ -203,13 +208,12 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=
         d = reduction_size * block_size
         frame_shape = np.shape(frame)
         N, M = frame_shape[0], frame_shape[1]
-        frame = frame[:(N // d) * d, :(M // d) * d, :]
+        N, M = (N // d) * d, (M // d) * d
+        frame = frame[:N, :M, :]
 
         if i % I_frame_interval == 0:
-            # Save the last I frame components for the next P frames
-            last_I_frame_Y, last_I_frame_Cb, last_I_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(frame)
-            last_I_frame_Cb = JPEG_compressor.shrink_matrix(last_I_frame_Cb, reduction_size)
-            last_I_frame_Cr = JPEG_compressor.shrink_matrix(last_I_frame_Cr, reduction_size)
+            # last I_frame components
+            last_I_frame_R, last_I_frame_G, last_I_frame_B = frame[:, :, 0].copy(), frame[:, :, 1].copy(), frame[:, :, 2].copy()
 
             # compress the I_frame by using JPEG compression
             Y_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Y_compressed_frame_{i}.txt'
@@ -219,33 +223,39 @@ def compress_video(video_file_path, QY, QC, I_frame_interval=10, reduction_size=
             JPEG_compressor.compress_image(frame, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size)
 
         else:
-            # compress the P_frame by using motion estimation and JPEG compression
 
-            P_frame_Y, P_frame_Cb, P_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(frame)
-            P_frame_Cb = JPEG_compressor.shrink_matrix(P_frame_Cb, reduction_size)
-            P_frame_Cr = JPEG_compressor.shrink_matrix(P_frame_Cr, reduction_size)
+            print(f"\n[Original] - Min: {np.min(frame)}, Max: {np.max(frame)}")
 
-            N1, M1 = P_frame_Y.shape
-            N2, M2 = P_frame_Cb.shape
-            N3, M3 = P_frame_Cr.shape
+            # current P_frame components
+            P_frame_R, P_frame_G, P_frame_B = frame[:, :, 0].copy(), frame[:, :, 1].copy(), frame[:, :, 2].copy()
 
-            # TODO: Guy to implement the inverse function of prepare_P_frame_for_compression
             # Prepare the P_frame for compression
-            P_frame_Y_residuals, P_frame_Y_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_Y, P_frame_Y, block_size=QY.shape[0], window_size=32)
-            P_frame_Cb_residuals, P_frame_Cb_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_Cb, P_frame_Cb, block_size=QC.shape[0], window_size=32)
-            P_frame_Cr_residuals, P_frame_Cr_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_Cr, P_frame_Cr, block_size=QC.shape[0], window_size=32)
+            P_frame_R_residuals, P_frame_R_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_R, P_frame_R, block_size=QY.shape[0], window_size=32)
+            P_frame_G_residuals, P_frame_G_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_G, P_frame_G, block_size=QC.shape[0], window_size=32)
+            P_frame_B_residuals, P_frame_B_motion_vectors = prepare_P_frame_component_for_compression(last_I_frame_B, P_frame_B, block_size=QC.shape[0], window_size=32)
+
+            # merge the residuals into one frame
+            residuals_frame = np.zeros((N, M, 3))
+            residuals_frame[:, :, 0] = P_frame_R_residuals
+            residuals_frame[:, :, 1] = P_frame_G_residuals
+            residuals_frame[:, :, 2] = P_frame_B_residuals
+
+            print(f"[Residuals] - Min: {np.min(residuals_frame)}, Max: {np.max(residuals_frame)}")
+
+            residuals_frame = (residuals_frame/2) + 128
+            residuals_frame = residuals_frame.astype(np.int32)
+
+            print(f"[Residuals] - Min: {np.min(residuals_frame)}, Max: {np.max(residuals_frame)}")
 
             # compress the P_frame by using JPEG compression
             Y_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Y_compressed_frame_{i}.txt'
             Cb_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cb_compressed_frame_{i}.txt'
             Cr_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cr_compressed_frame_{i}.txt'
 
-            JPEG_compressor.compress_image_for_video(P_frame_Y_residuals, Y_compressed_frame_file, QY, N1, M1)
-            JPEG_compressor.compress_image_for_video(P_frame_Cb_residuals, Cb_compressed_frame_file, QC, N2, M2)
-            JPEG_compressor.compress_image_for_video(P_frame_Cr_residuals, Cr_compressed_frame_file, QC, N3, M3)
+            JPEG_compressor.compress_image(residuals_frame, Y_compressed_frame_file, Cb_compressed_frame_file, Cr_compressed_frame_file, QY, QC, reduction_size)
 
             motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/motion_vectors_frame_{i}.txt'
-            encoding_motion_vectors(P_frame_Y_motion_vectors, P_frame_Cb_motion_vectors, P_frame_Cr_motion_vectors, motion_vectors_compressed_file)
+            encoding_motion_vectors(P_frame_R_motion_vectors, P_frame_G_motion_vectors, P_frame_B_motion_vectors, motion_vectors_compressed_file)
 
     return frame_count
 

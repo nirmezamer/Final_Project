@@ -55,7 +55,6 @@ def calc_compression_ratio(original_video_path, I_frame_interval=10):
 
 def main():
 
-
     video_file_path = 'videos_to_compress/earth_video.mp4'
 
     # Getting lists of options for Quantization Matrices
@@ -69,22 +68,35 @@ def main():
     # Reduction size
     reduction_size = 2
 
+    I_frame_interval = 10
+
     # Declare list of videos to compress
     videos_to_compress_path = "./videos_to_compress"
     videos_names = os.listdir(videos_to_compress_path) # list of names of videos in the dir
 
     for video_name in videos_names:
 
+        # TODO: remove this skipping
+        if "3sec" in video_name:
+            continue
+
         print(f"Starting to compress {video_name}")
 
         # Compress video
         video_file_path = f"{videos_to_compress_path}/{video_name}"
-        frame_count = compress_video(video_file_path, QY, QC, reduction_size=reduction_size,I_frame_interval=1)
+        frame_count = compress_video(video_file_path, QY, QC, reduction_size=reduction_size,I_frame_interval=I_frame_interval)
 
         # after compression, the compressed files of the video are saved in the compressed_files_for_video folder
 
         # Decompress video
-        decompress_video(frame_count, f"restored_videos/{video_name}", QY, QC, reduction_size=reduction_size, I_frame_interval=1)
+        decompress_video(frame_count, f"restored_videos/{video_name}", QY, QC, reduction_size=reduction_size, I_frame_interval=I_frame_interval)
+
+
+        # Calculate RMS and compression ratio
+        rms = calculate_RMS(f'videos_to_compress/{video_name}', f'restored_videos/{video_name}')
+        print(f"RMS: {rms}")
+        compression_ratio = calc_compression_ratio(f'videos_to_compress/{video_name}', I_frame_interval=I_frame_interval)
+        print(f"Compression ratio: {compression_ratio}")
 
         print(f"Finished compressing {video_name}")
 
@@ -93,10 +105,4 @@ def main():
 
 
 if __name__ == '__main__':
-    #main()
-
-    rms = calculate_RMS('videos_to_compress/earth_video.mp4', 'restored_videos/earth_video.mp4')
-    print(f"RMS: {rms}")
-    
-    compression_ratio = calc_compression_ratio('videos_to_compress/earth_video.mp4', I_frame_interval=1)
-    print(f"Compression ratio: {compression_ratio}")
+    main()

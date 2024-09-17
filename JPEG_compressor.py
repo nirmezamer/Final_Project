@@ -112,13 +112,12 @@ def proccessing_image_before_compress(mat, Q, break_matrix_into_blocks_bool=True
     zigzag_blocks_list = []
     for block in blocks_list:
         block = block.astype(np.int32)
-        if break_matrix_into_blocks_bool:
-            # centering the block values
-            block = block - 128
-            block = DCT(block)
-            # divide and round to floor the block values
-            block = block / Q
-            block = np.round(block)
+        # centering the block values
+        block = block - 128
+        block = DCT(block)
+        # divide and round to floor the block values
+        block = block / Q
+        block = np.round(block)
         # create the list of zigzag blocks
         block = zigzag(block, k)
         zigzag_blocks_list.append(block)
@@ -234,13 +233,6 @@ def compress_image(img_RGB, Y_compressed_file, Cb_compressed_file, Cr_compressed
     encoding_image(img_Y_zigzag_blocks_list, Y_compressed_file, N1, M1)
     encoding_image(img_Cb_zigzag_blocks_list, Cb_compressed_file, N2, M2)
     encoding_image(img_Cr_zigzag_blocks_list, Cr_compressed_file, N3, M3)
-
-    return None
-
-def compress_image_for_video(residuals_blocks, compressed_file, Q, N, M):
-
-    img_zigzag_blocks_list = proccessing_image_before_compress(None, Q, break_matrix_into_blocks_bool=False, list_of_blocks=residuals_blocks)
-    encoding_image(img_zigzag_blocks_list, compressed_file, N, M)
 
     return None
 

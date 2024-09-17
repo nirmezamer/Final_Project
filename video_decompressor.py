@@ -1,4 +1,6 @@
 import ast
+
+import numpy as np
 from tqdm import tqdm
 
 from video_compressor import *
@@ -40,6 +42,7 @@ def create_video_from_frames(frames_list, video_file_path):
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(video_file_path, fourcc, 30, (width, height))
     for frame in frames_list:
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         out.write(frame)
     out.release()
 
@@ -89,10 +92,6 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
 
     frames_list = []
 
-    last_I_frame_Y = None
-    last_I_frame_Cb = None
-    last_I_frame_Cr = None
-
     for i in tqdm(range(frame_count)):
         if i % I_frame_interval == 0:
             # I frame
@@ -105,10 +104,8 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
             restored_frame = JPEG_decompress.decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size)
             frames_list.append(restored_frame)
 
-            # just for reference to the next P frames
-            last_I_frame_Y, last_I_frame_Cb, last_I_frame_Cr = JPEG_compressor.convert_RGB_to_YCbCr(restored_frame)
-            last_I_frame_Cb = JPEG_compressor.shrink_matrix(last_I_frame_Cb, reduction_size)
-            last_I_frame_Cr = JPEG_compressor.shrink_matrix(last_I_frame_Cr, reduction_size)
+            # last I_frame components
+            last_I_frame_R, last_I_frame_G, last_I_frame_B = restored_frame[:, :, 0].copy(), restored_frame[:, :, 1].copy(), restored_frame[:, :,2].copy()
 
         else:
             # P frame
@@ -118,24 +115,45 @@ def decompress_video(frame_count, video_file_path, QY, QC, I_frame_interval=10, 
             Cb_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cb_compressed_frame_{i}.txt'
             Cr_compressed_frame_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/Cr_compressed_frame_{i}.txt'
 
-            Y_residuals_blocks = JPEG_decompress.decompress_image_for_video(Y_compressed_frame_file, QY)
-            Cb_residuals_blocks = JPEG_decompress.decompress_image_for_video(Cb_compressed_frame_file, QC)
-            Cr_residuals_blocks = JPEG_decompress.decompress_image_for_video(Cr_compressed_frame_file, QC)
+            residuals_frame = JPEG_decompress.decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size)
 
+            print(f"\n[Residuals] - Min: {np.min(residuals_frame)}, Max: {np.max(residuals_frame)}")
+
+            residuals_frame = residuals_frame.astype(np.int32)
+            residuals_frame = residuals_frame * 2 - 255
+            residuals_frame = residuals_frame.astype(np.int32)
+
+            print(f"[Residuals] - Min: {np.min(residuals_frame)}, Max: {np.max(residuals_frame)}")
+
+            R_residuals_blocks, G_residuals_blocks, B_residuals_blocks = residuals_frame[:, :, 0].copy(), residuals_frame[:, :, 1].copy(), residuals_frame[:, :, 2].copy()
+            R_residuals_blocks = JPEG_compressor.break_matrix_into_blocks(R_residuals_blocks, QY.shape[0])
+            G_residuals_blocks = JPEG_compressor.break_matrix_into_blocks(G_residuals_blocks, QY.shape[0])
+            B_residuals_blocks = JPEG_compressor.break_matrix_into_blocks(B_residuals_blocks, QY.shape[0])
+
+            # restore the motion vectors
             motion_vectors_compressed_file = f'{compressed_files_video_folder_global}/{compressed_files_video_folder}/motion_vectors_frame_{i}.txt'
+            R_motion_vectors, G_motion_vectors, B_motion_vectors = decoding_motion_vectors(motion_vectors_compressed_file)
 
-            Y_motion_vectors, Cb_motion_vectors, Cr_motion_vectors = decoding_motion_vectors(motion_vectors_compressed_file)
+            # restore the P_frame
+            restored_P_frame_R = reconstruct_P_frame_component(last_I_frame_R, R_residuals_blocks, R_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_G = reconstruct_P_frame_component(last_I_frame_G, G_residuals_blocks, G_motion_vectors, block_size=QC.shape[0])
+            restored_P_frame_B = reconstruct_P_frame_component(last_I_frame_B, B_residuals_blocks, B_motion_vectors, block_size=QC.shape[0])
 
-            restored_P_frame_Y = reconstruct_P_frame_component(last_I_frame_Y, Y_residuals_blocks, Y_motion_vectors, block_size=QC.shape[0])
-            restored_P_frame_Cb = reconstruct_P_frame_component(last_I_frame_Cb, Cb_residuals_blocks, Cb_motion_vectors, block_size=QC.shape[0])
-            restored_P_frame_Cr = reconstruct_P_frame_component(last_I_frame_Cr, Cr_residuals_blocks, Cr_motion_vectors, block_size=QC.shape[0])
+            N, M = np.shape(restored_P_frame_R)
+            restored_frame = np.zeros((N, M, 3))
+            restored_frame[:, :, 0] = restored_P_frame_R
+            restored_frame[:, :, 1] = restored_P_frame_G
+            restored_frame[:, :, 2] = restored_P_frame_B
 
-            # expand the matrices to the original size
-            restored_P_frame_Cb = JPEG_decompress.expand_matrix(restored_P_frame_Cb, reduction_size)
-            restored_P_frame_Cr = JPEG_decompress.expand_matrix(restored_P_frame_Cr, reduction_size)
+            print(f"[Restored] - Min: {np.min(restored_frame)}, Max: {np.max(restored_frame)}")
 
-            # restore the frame
-            restored_frame = JPEG_decompress.convert_YCbCr_to_RGB(restored_P_frame_Y, restored_P_frame_Cb, restored_P_frame_Cr)
+            restored_frame = np.clip(restored_frame, 0, 255)
+            restored_frame = restored_frame.astype(np.uint8)
+
+            print(f"[Restored] - Min: {np.min(restored_frame)}, Max: {np.max(restored_frame)}")
+
+            restored_frame = 255 - restored_frame
+
             frames_list.append(restored_frame)
 
     create_video_from_frames(frames_list, f"{video_file_path}")
