@@ -413,8 +413,107 @@ def find_best_reduction_size():
 
     return
 
+def find_best_block_size():
+
+    print("Starting to find the best block size...")
+
+    images_to_compress_path = "./images_to_compress"
+    image_name = "earth.webp"
+    image_name_without_format = "earth"
+    image_format = "webp"
+    func_dir = "./find_best_block_size"
+    Y_compressed_file = f"{func_dir}/{image_name_without_format}_{image_format}_Y_component.txt"
+    Cb_compressed_file = f"{func_dir}/{image_name_without_format}_{image_format}_Cb_component.txt"
+    Cr_compressed_file = f"{func_dir}/{image_name_without_format}_{image_format}_Cr_component.txt"
+
+    # Read the image
+    img = plt.imread(f"{images_to_compress_path}/{image_name}")
+    img = prepare_image_to_compress(img, image_format)
+
+    # Getting lists of options for Quantization Matrices
+    QY_list = QY_matrices.get_QY_list()
+    QC_list = QC_matrices.get_QC_list()
+
+    q = 1
+    reduction_size = 2
+    global_QY = q * QY_list[0]
+    global_QC = q * QC_list[0]
+    global_QY = np.block([[global_QY, global_QY], [global_QY, global_QY]])
+    global_QC = np.block([[global_QC, global_QC], [global_QC, global_QC]])
+    global_QY = np.block([[global_QY, global_QY], [global_QY, global_QY]])
+    global_QC = np.block([[global_QC, global_QC], [global_QC, global_QC]])
+
+
+    # Initialize lists to store values
+    i_values = []
+    elapsed_times = []
+    rms_values = []
+    compression_ratios = []
+
+    for block_size in [4, 8, 16, 32]:
+        print(f"block_size = {block_size}")
+
+        # define Q matrices by block size
+        QY = global_QY[:block_size, :block_size]
+        QC = global_QC[:block_size, :block_size]
+
+        # Compress the image and measure its start & end time
+        start_time = time.time()
+        JPEG_compressor.compress_image(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size)
+        end_time = time.time()
+
+        # Decompress the image
+        compressed_img = JPEG_decompress.decompress_image(Y_compressed_file, Cb_compressed_file, Cr_compressed_file, QY, QC, reduction_size)
+
+        # Calculate the measurement parameters and printing the result
+        elapsed_time = end_time - start_time
+        elapsed_time /= 5
+        rms = np.sqrt(np.mean(np.square(img.flatten() - compressed_img.flatten())))
+        compression_ratio = calc_compression_ratio(img, Y_compressed_file, Cb_compressed_file, Cr_compressed_file)
+
+        # Append current values to lists
+        i_values.append(block_size)
+        elapsed_times.append(elapsed_time)
+        rms_values.append(rms)
+        compression_ratios.append(compression_ratio)
+
+    # After the loop, plot the values
+    plt.figure(figsize=(10, 6))
+
+    plt.subplot(3, 1, 1)
+    plt.plot(i_values, elapsed_times, marker='o')
+    plt.xscale('log', base=2)
+    plt.title('Elapsed Time vs. Block Size')
+    plt.xlabel('block_size')
+    plt.ylabel('Elapsed Time')
+    plt.ylim(bottom=0, top=max(elapsed_times) * 1.1)
+
+    plt.subplot(3, 1, 2)
+    plt.plot(i_values, rms_values, marker='o')
+    plt.xscale('log', base=2)
+    plt.title('RMS Value vs. Block Size')
+    plt.xlabel('block_size')
+    plt.ylabel('RMS Value')
+    plt.ylim(bottom=0, top=max(rms_values) * 1.1)
+
+    plt.subplot(3, 1, 3)
+    plt.plot(i_values, compression_ratios, marker='o')
+    plt.xscale('log', base=2)
+    plt.title('Compression Ratio vs. Block Size')
+    plt.xlabel('block_size')
+    plt.ylabel('Compression Ratio')
+    plt.ylim(bottom=0, top=max(compression_ratios) * 1.1)
+
+    plt.tight_layout()
+    plt.savefig(f"{func_dir}/quantitative_parameters.jpg")
+
+    print(f"plot saved in {func_dir}/quantitative_parameters.jpg")
+
+    return
+
 if __name__ == "__main__":
     main()
-    find_best_QY_matrix()
-    find_best_QC_matrix()
-    find_best_reduction_size()
+    # find_best_QY_matrix()
+    # find_best_QC_matrix()
+    # find_best_reduction_size()
+    # find_best_block_size()

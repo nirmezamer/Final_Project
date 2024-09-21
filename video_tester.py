@@ -105,4 +105,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    video_name = "earth_video.mp4"
+    I_frame_interval = 10
+    rms = calculate_RMS(f'videos_to_compress/{video_name}', f'restored_videos/{video_name}')
+    print(f"RMS: {rms}")
+    compression_ratio = calc_compression_ratio(f'videos_to_compress/{video_name}', I_frame_interval=I_frame_interval)
+    print(f"Compression ratio: {compression_ratio}")
+
